@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17414f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Compta">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Compta Médecin</title>
+<style>
+:root{
+  --bg:#f4f3ef; --surface:#fcfcfb; --surface-2:#efede7; --line:#dedbd2;
+  --ink:#16201f; --ink-2:#4f5856; --ink-3:#7c8482;
+  --brand:#17414f; --brand-2:#235d70; --brand-soft:#e2ecee;
+  --s-rec:#2a78d6; --s-dep:#eb6834; --s-sal:#1baf7a;
+  --ok:#1f7a45; --ok-bg:#e3f2e8; --warn:#9a5b00; --warn-bg:#fbefd6; --bad:#b3261e; --bad-bg:#fbe5e3;
+  --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+  --nav-w:220px;
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+h1{font-size:1.45rem} h2{font-size:1.1rem} h3{font-size:.95rem}
+a{color:var(--brand-2)}
+
+/* Layout */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 18px;padding-top:max(10px,env(safe-area-inset-top));background:var(--brand);color:#fff}
+.brand{font-weight:700;font-size:1.05rem;letter-spacing:.01em;flex:1}
+.brand small{display:block;font-weight:400;opacity:.75;font-size:.75rem}
+.top select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px}
+.top select option{color:#000}
+#nav{position:fixed;top:56px;left:0;bottom:0;width:var(--nav-w);padding:16px 10px;display:flex;flex-direction:column;gap:2px;background:var(--surface);border-right:1px solid var(--line)}
+#nav button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:10px 12px;border-radius:9px;cursor:pointer;text-align:left;color:var(--ink-2)}
+#nav button svg{width:20px;height:20px;flex:none}
+#nav button:hover{background:var(--surface-2)}
+#nav button.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+main{margin-left:var(--nav-w);padding:22px 26px 60px;max-width:1180px}
+
+@media (max-width:760px){
+  #nav{top:auto;right:0;width:auto;height:auto;flex-direction:row;justify-content:space-around;padding:4px 2px;padding-bottom:max(4px,env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--line);z-index:30}
+  #nav button{flex-direction:column;gap:2px;font-size:.68rem;padding:6px 4px;flex:1;align-items:center;text-align:center}
+  main{margin-left:0;padding:14px 12px 96px}
+  .top{padding-left:14px;padding-right:14px;gap:8px}
+  .brand small{display:none}
+  .top select{padding:6px 6px;max-width:42vw}
+}
+.formerr{background:var(--bad-bg);color:var(--bad);border-radius:9px;padding:10px 12px;margin-bottom:12px;font-weight:550}
+.field.invalid input,.field.invalid select{border-color:var(--bad);background:#fff7f6}
+.field.invalid label{color:var(--bad)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:7px 14px;cursor:pointer;color:var(--ink-2)}
+.seg button.on{background:var(--brand);color:#fff}
+tr.detail td{background:#f7f6f2;font-size:.85rem}
+.synth .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.grid-t{width:100%;border-collapse:collapse;min-width:620px;font-size:.88rem}
+.grid-t th,.grid-t td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.grid-t thead th{font-size:.78rem;color:var(--ink-2);background:var(--surface-2)}
+.grid-t tbody th{text-align:left;font-weight:500;color:var(--ink-2)}
+.grid-t tr.sec th{background:var(--brand-soft);color:var(--brand);font-weight:650;text-align:left}
+.grid-t tr.strong th,.grid-t tr.strong td{font-weight:650;color:var(--ink)}
+.grid-t td.tot{font-weight:600;background:#f7f6f2}
+tr.cur td{background:#f1f6f7}
+
+/* Components */
+.head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.head .sp{flex:1}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));align-items:start}
+@media (max-width:760px){.kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi .val{font-size:1.15rem}.card{padding:13px}}
+.kpi .lbl{color:var(--ink-2);font-size:.82rem}
+.kpi .val{font-size:1.45rem;font-weight:650;margin-top:2px}
+.kpi .sub{color:var(--ink-3);font-size:.78rem;margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:550}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand-2)}
+.btn.danger{color:var(--bad);border-color:#f0c2be}
+.btn.sm{padding:5px 10px;font-size:.85rem}
+.btn.ghost{border-color:transparent;background:none}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.78rem;font-weight:600}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)}
+.banner{border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.banner.warn{background:var(--warn-bg);color:#5c3800}
+.banner.info{background:var(--brand-soft);color:var(--brand)}
+.banner.bad{background:var(--bad-bg);color:#7a1a14;border:1px solid #f0c2be}
+.cum-bad{color:var(--bad);font-weight:650}
+.calc-d{margin-top:8px;font-size:.84rem}
+.calc-d summary{cursor:pointer;color:var(--brand-2);font-weight:600;list-style-position:inside}
+.calc-d table{width:100%;border-collapse:collapse;margin-top:6px}
+.calc-d td{padding:3px 0;border-bottom:1px dashed var(--line)}
+.calc-d td.num{text-align:right}
+.calc-d tr.strong td{font-weight:650;border-bottom:1px solid var(--line)}
+.calc-d p{margin:6px 0 0}
+.warn-t{color:var(--warn)}
+.kpi.treso{grid-column:1/-1}
+.grid>*{min-width:0}
+html,body{overflow-x:hidden}
+.grid-t tfoot th,.grid-t tfoot td{font-weight:650;background:var(--surface-2);border-bottom:0}
+.grid-t tr.cur-m td,.grid-t tr.cur-m th{background:#f1f6f7}
+.grid-t tr.fut td,.grid-t tr.fut th{color:var(--ink-2);font-style:italic}
+.grid-t tbody th .pill{font-style:normal;margin-left:4px}
+.neg{color:var(--bad)}
+@media (max-width:760px){
+  .treso .grid-t{min-width:0}
+  .treso .grid-t thead{display:none}
+  .treso .grid-t tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;padding:9px 4px;border-bottom:1px solid var(--line)}
+  .treso .grid-t th,.treso .grid-t td{border:0;padding:1px 0;text-align:left;white-space:normal;background:none}
+  .treso .grid-t tbody th,.treso .grid-t tfoot th{grid-column:1/-1;font-weight:650;color:var(--ink)}
+  .treso .grid-t td::before{content:attr(data-l);display:block;font-size:.72rem;color:var(--ink-3);font-style:normal;font-weight:400}
+  .treso .grid-t tfoot tr{background:var(--surface-2);border-radius:8px}
+  .treso .grid-t tr.cur-m{background:#f1f6f7;border-radius:8px}
+}
+.muted{color:var(--ink-3)} .small{font-size:.83rem}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filters select,.filters input{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px}
+.empty{text-align:center;padding:40px 16px;color:var(--ink-3)}
+
+/* Tables -> cards on mobile */
+table.list{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.list th{text-align:left;font-size:.78rem;font-weight:600;color:var(--ink-2);background:var(--surface-2);padding:9px 12px;white-space:nowrap}
+.list td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:middle}
+.list td.r,.list th.r{text-align:right}
+.list tr.row{cursor:pointer}
+.list tr.row:hover td{background:#f7f6f2}
+.list tfoot td{font-weight:650;background:var(--surface-2)}
+@media (max-width:760px){
+  table.list,.list tbody,.list tr,.list td,.list tfoot{display:block;width:100%}
+  .list thead{display:none}
+  table.list{border:0;background:none}
+  .list tr{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;padding:6px 4px}
+  .list td{border:0;padding:3px 10px;display:flex;justify-content:space-between;gap:10px}
+  .list td.r{text-align:right}
+  .list td::before{content:attr(data-l);color:var(--ink-3);font-size:.8rem}
+  .list td[data-l=""]::before{content:none}
+  .list tfoot tr{background:var(--surface-2)}
+}
+
+/* Modal / forms */
+.modal{position:fixed;inset:0;background:rgba(10,20,20,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal.hidden{display:none}
+.sheet{background:var(--surface);border-radius:14px;width:min(720px,100%);max-height:92vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.sheet header{position:sticky;top:0;background:var(--surface);padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:2}
+.sheet header h2{flex:1}
+.sheet .body{padding:16px 18px}
+.sheet footer{position:sticky;bottom:0;background:var(--surface);padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+.sheet footer .sp{flex:1}
+@media (max-width:760px){
+  .modal{padding:0;align-items:flex-end}
+  .sheet{border-radius:16px 16px 0 0;max-height:94vh}
+  .sheet footer{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.fgrid .full{grid-column:1/-1}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr}}
+.field label{display:block;font-size:.82rem;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff;min-height:42px}
+.field textarea{min-height:70px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--brand-2);outline-offset:-1px;border-color:transparent}
+.field .hint{font-size:.76rem;color:var(--ink-3);margin-top:3px}
+.field input[readonly]{background:var(--surface-2)}
+.calc{background:var(--brand-soft);color:var(--brand);border-radius:9px;padding:9px 12px;font-size:.88rem}
+
+/* Charts */
+.chart-wrap{position:relative}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2);margin:6px 0 4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--ink-3);font-size:11px}
+.tip{position:absolute;pointer-events:none;background:#111c1b;color:#fff;font-size:.8rem;padding:7px 10px;border-radius:8px;white-space:nowrap;opacity:0;transition:opacity .1s;z-index:5}
+.tip b{display:block;margin-bottom:2px}
+.hbar{display:grid;grid-template-columns:minmax(120px,1.3fr) 2fr auto;gap:8px 10px;align-items:center;font-size:.85rem}
+.hbar .bar{height:10px;border-radius:0 4px 4px 0;background:var(--s-dep)}
+.hbar .track{background:var(--surface-2);border-radius:4px}
+
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#111c1b;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.section-title{margin:22px 0 10px}
+.two{grid-template-columns:1.6fr 1fr}
+@media (max-width:980px){.two{grid-template-columns:1fr}}
+.stack>*+*{margin-top:10px}
+.setgrid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+
+/* Print */
+.print-only{display:none}
+@media print{
+  body{background:#fff;font-size:11pt}
+  .top,#nav,.no-print,.btn{display:none!important}
+  main{margin:0;padding:0;max-width:none}
+  .card{box-shadow:none;border-color:#ccc;break-inside:avoid}
+  .print-only{display:block}
+  table.list{border:1px solid #ccc}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Compta Médecin<small id="who"></small></div>
+  <select id="perSel" aria-label="Période"></select>
+  <select id="yearSel" aria-label="Année"></select>
+</header>
+<nav id="nav" aria-label="Navigation"></nav>
+<main id="view"></main>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
+<div id="tip" class="tip"></div>
+<div id="toast" class="toast" role="status"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+"use strict";
+/* ======================= Constantes ======================= */
+const APP_VERSION = 1;
+const DB_NAME = "compta-medecin", DB_VER = 1;
+const STORES = ["remplacements","salaires","depenses","fichiers","meta"];
+
+const CATEGORIES = [
+  ["achats","Achats (consommables, petit matériel médical)"],
+  ["loyer","Loyer et charges locatives"],
+  ["location","Location de matériel / mobilier"],
+  ["entretien","Entretien et réparations"],
+  ["personnel","Personnel (salaires, charges)"],
+  ["retro_versees","Rétrocessions versées (à vos remplaçants)"],
+  ["urssaf","Cotisations sociales obligatoires (URSSAF, CARMF)"],
+  ["madelin","Cotisations facultatives (Madelin, prévoyance)"],
+  ["csg","CSG déductible"],
+  ["cfe","CFE et autres impôts professionnels"],
+  ["vehicule","Frais de véhicule / kilométriques"],
+  ["deplacement","Déplacements (train, hôtel, parking, péage)"],
+  ["repas","Frais de repas"],
+  ["formation","Formation, congrès, DPC"],
+  ["documentation","Documentation, abonnements, logiciels"],
+  ["bureau","Fournitures de bureau, petit informatique"],
+  ["telecom","Téléphone, internet"],
+  ["assurance","Assurances (RCP, multirisque)"],
+  ["ordre","Cotisations professionnelles (Ordre, syndicat)"],
+  ["honoraires","Honoraires (comptable, AGA, juriste)"],
+  ["banque","Frais bancaires"],
+  ["immo","Matériel à amortir (> 500 € HT)"],
+  ["autres","Autres frais professionnels"]
+];
+const CAT = Object.fromEntries(CATEGORIES);
+const MODES = ["Virement","Chèque","Carte bancaire","Espèces","Prélèvement","Autre"];
+const TYPES_SAL = ["Salaire mensuel","Gardes / astreintes","Vacations","Prime / indemnité","Autre"];
+const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+
+const DEFAULT_SETTINGS = {
+  id:"settings", nom:"", rpps:"", statut:"remplacant", regime:"micro",
+  seuilMicro:83600, abattementMicro:34, abattementMin:305, tauxRetroDefaut:70,
+  rappelJours:14, lastBackup:null, updatedAt:0,
+  regimeSocial:"rspm", urssafPeriodicite:"T", urssafBase:"encaissement", urssafVersement:"suivant",
+  rspmSeuil1:19000, rspmTaux1:13.5, rspmSeuil2:38000, rspmTaux2:22, tauxProvision:0,
+  impotLibAnnuel:11, impotLibMensuel:12, impotSalariat:7.5,
+  declarations:{}
+};
+const pad = n => String(n).padStart(2,"0");
+const pct = n => (+n||0).toLocaleString("fr-FR");
+
+/* ======================= Utilitaires ======================= */
+const $ = (s,el=document)=>el.querySelector(s);
+const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const euro = new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"});
+const eur = n => euro.format(+n||0);
+const eur0 = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(+n||0);
+const num = v => { if(v===""||v==null) return 0; const n=parseFloat(String(v).replace(/\s/g,"").replace(",",".")); return isFinite(n)?n:0; };
+const r2 = n => Math.round((+n||0)*100)/100;
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = ()=> new Date().toISOString().slice(0,10);
+const fdate = d => d ? new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+const fmonth = p => { if(!p) return "—"; const [y,m]=p.split("-"); return MOIS[+m-1]+" "+y; };
+const yearOf = d => d ? +String(d).slice(0,4) : null;
+const monthOf = d => d ? +String(d).slice(5,7)-1 : null;
+function daysBetween(a,b){ if(!a||!b) return 0; const d=(new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/864e5; return d>=0? Math.round(d)+1 : 0; }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* ======================= Base de données (IndexedDB) ======================= */
+let db;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded = ()=>{ const d=r.result; STORES.forEach(s=>{ if(!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:"id"}); }); };
+    r.onsuccess = ()=>res(r.result);
+    r.onerror = ()=>rej(r.error);
+  });
+}
+function idb(store,mode,fn){
+  return new Promise((res,rej)=>{
+    const t = db.transaction(store,mode), s = t.objectStore(store);
+    const req = fn(s);
+    t.oncomplete = ()=>res(req && "result" in req ? req.result : undefined);
+    t.onerror = ()=>rej(t.error); t.onabort = ()=>rej(t.error);
+  });
+}
+const getAll = s => idb(s,"readonly",st=>st.getAll());
+const getOne = (s,id) => idb(s,"readonly",st=>st.get(id));
+const putOne = (s,o) => idb(s,"readwrite",st=>st.put(o));
+const clearStore = s => idb(s,"readwrite",st=>st.clear());
+
+/* ======================= État ======================= */
+const S = { remplacements:[], salaires:[], depenses:[], settings:{...DEFAULT_SETTINGS}, view:"dash", year:new Date().getFullYear(), period:"Y", filters:{} };
+const live = arr => arr.filter(x=>!x.deleted);
+
+async function loadAll(){
+  for(const s of ["remplacements","salaires","depenses"]) S[s] = await getAll(s);
+  const st = await getOne("meta","settings");
+  S.settings = {...DEFAULT_SETTINGS, ...(st||{})};
+  if(!S.settings.migrBareme22){ // barème demandé : 13,5 % jusqu'à 19 000 €, 22 % jusqu'à 38 000 €, régime simplifié
+    Object.assign(S.settings,{rspmSeuil1:19000,rspmTaux1:13.5,rspmSeuil2:38000,rspmTaux2:22,regimeSocial:"rspm",migrBareme22:true});
+    if(st) await saveSettings();
+  }
+}
+async function save(store,obj){
+  obj.updatedAt = Date.now();
+  await putOne(store,obj);
+  const arr = S[store]; const i = arr.findIndex(x=>x.id===obj.id);
+  if(i>=0) arr[i]=obj; else arr.push(obj);
+}
+async function softDelete(store,obj){
+  if(obj.fichierId){ await putOne("fichiers",{id:obj.fichierId,deleted:true,updatedAt:Date.now()}); }
+  await save(store,{...obj,deleted:true});
+}
+async function saveSettings(){ S.settings.updatedAt=Date.now(); await putOne("meta",S.settings); }
+
+/* ======================= Calculs ======================= */
+function rempCalc(r){
+  const du = num(r.montantDu), percu = num(r.montantPercu);
+  let statut = "attente";
+  if(du>0 && percu>=du-0.005) statut="paye"; else if(percu>0) statut="partiel";
+  if(du===0 && percu>0) statut="paye";
+  return {du,percu,reste:Math.max(0,r2(du-percu)),statut};
+}
+const STATUT_LBL = {paye:["Payé","ok"],partiel:["Partiel","warn"],attente:["En attente","bad"]};
+const salRevenu = s => num(s.netAvantImpot) || (num(s.netPaye)+num(s.impotPreleve)) || num(s.netImposable);
+const activiteDate = r => r.dateFin || r.dateDebut;
+const depDeductible = d => r2(num(d.montant)*num(d.partPro??100)/100);
+
+/* ---- Période (année / trimestre / mois) ---- */
+const PERIODES = [["Y","Année entière"],["Q1","1er trimestre"],["Q2","2e trimestre"],["Q3","3e trimestre"],["Q4","4e trimestre"],
+  ...["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"].map((m,i)=>["M"+pad(i+1),m.charAt(0).toUpperCase()+m.slice(1)])];
+function periodRange(p=S.period, y=S.year){
+  if(p==="Y") return [`${y}-01-01`,`${y}-12-31`];
+  if(p[0]==="Q"){ const m1=(+p[1]-1)*3+1; return [`${y}-${pad(m1)}-01`,`${y}-${pad(m1+2)}-31`]; }
+  return [`${y}-${p.slice(1)}-01`,`${y}-${p.slice(1)}-31`];
+}
+const normD = d => !d ? "" : (String(d).length===7 ? d+"-15" : String(d).slice(0,10));
+function inP(d){ if(!d) return false; const [a,b]=periodRange(); const s=normD(d); return s>=a && s<=b; }
+const inYear = d => !!d && yearOf(d)===S.year;
+function periodLabel(p=S.period){ const l=Object.fromEntries(PERIODES)[p]; return p==="Y" ? String(S.year) : l+" "+S.year; }
+
+function yearStats(y, pred=inYear){
+  const st = S.settings;
+  const months = Array.from({length:12},()=>({rec:0,dep:0,sal:0}));
+  let recettes=0, depenses=0, salaires=0, salNetImp=0, salPas=0, jours=0, nbRemp=0;
+  const byCat = {}, impayes = [];
+  live(S.remplacements).forEach(r=>{
+    const c = rempCalc(r);
+    if(r.datePaiement && c.percu){ if(yearOf(r.datePaiement)===y) months[monthOf(r.datePaiement)].rec+=c.percu; if(pred(r.datePaiement)) recettes+=c.percu; }
+    if(pred(r.dateDebut)){ jours+=num(r.jours); nbRemp++; }
+    if(c.reste>0) impayes.push({...r,...c});
+  });
+  live(S.depenses).forEach(d=>{
+    const v = depDeductible(d);
+    if(yearOf(d.date)===y) months[monthOf(d.date)].dep+=v;
+    if(!pred(d.date)) return;
+    depenses+=v; byCat[d.categorie]=(byCat[d.categorie]||0)+v;
+  });
+  live(S.salaires).forEach(s=>{
+    if(yearOf(s.periode)===y) months[monthOf(s.periode)].sal+=salRevenu(s);
+    if(!pred(s.periode)) return;
+    salaires+=salRevenu(s); salNetImp+=num(s.netImposable); salPas+=num(s.impotPreleve);
+  });
+  const abat = Math.max(st.abattementMin, recettes*st.abattementMicro/100);
+  const benefMicro = Math.max(0, recettes-abat);
+  const benefReel = recettes - depenses;
+  const benef = st.regime==="micro" ? benefMicro : benefReel;
+  return {months,recettes:r2(recettes),depenses:r2(depenses),salaires:r2(salaires),salNetImp:r2(salNetImp),salPas:r2(salPas),jours,nbRemp,byCat,impayes,
+    benefMicro:r2(benefMicro),benefReel:r2(benefReel),benef:r2(benef),revenuGlobal:r2(benef+salaires),
+    tauxCharges: recettes? depenses/recettes*100 : 0};
+}
+/* ---- Synthèse trimestrielle (modèle onglet « 2026 ») ---- */
+/* ---- Revenus : imposable et net disponible, sur la période sélectionnée ---- */
+function revenus(pred=inP){
+  const st=S.settings, k=yearStats(S.year,pred);
+  // 1. Revenu imposable : bénéfice BNC (recettes encaissées) + net imposable des salaires
+  let niSal=0, nbSansNI=0, approx=0;
+  live(S.salaires).forEach(s=>{ if(!pred(s.periode)) return;
+    if(s.netImposable!==""&&s.netImposable!=null){ niSal+=num(s.netImposable); } else { nbSansNI++; approx+=salRevenu(s); niSal+=salRevenu(s); } });
+  const abat = st.regime==="micro" ? Math.max(st.abattementMin, k.recettes*st.abattementMicro/100) : 0;
+  const imposable = { recettes:k.recettes, regime:st.regime, abat:r2(Math.min(abat,k.recettes)), depenses:k.depenses, benef:k.benef,
+    niSal:r2(niSal), nbSansNI, approx:r2(approx), total:r2(k.benef+niSal) };
+  // 2. Revenu net disponible (logique de l'onglet « 2026 » de l'Excel)
+  let ca=0, cotP=0, sal=0, pas=0;
+  live(S.remplacements).forEach(r=>{ const d=activiteDate(r); if(!pred(d)) return; const c=rempCalc(r); ca+=c.du||c.percu; });
+  live(S.depenses).forEach(d=>{ if(d.categorie==="urssaf" && pred(d.date)) cotP+=depDeductible(d); });
+  live(S.salaires).forEach(s=>{ if(!pred(s.periode)) return; sal+=salRevenu(s); pas+=num(s.impotPreleve); });
+  const libBrut=ca-cotP, impLib=libBrut*st.impotLibAnnuel/100, libNet=libBrut-impLib;
+  const aPrelever=sal*st.impotSalariat/100-pas, salNet=sal-pas-aPrelever;
+  const net = { ca:r2(ca), cotP:r2(cotP), libBrut:r2(libBrut), impLib:r2(impLib), libNet:r2(libNet), sal:r2(sal), pas:r2(pas), aPrelever:r2(aPrelever), salNet:r2(salNet), total:r2(libNet+salNet) };
+  return {imposable, net};
+}
+function revenusHTML(){
+  const st=S.settings, {imposable:I, net:N}=revenus(), L=(l,v,b)=>`<tr${b?' class="strong"':""}><td>${l}</td><td class="num">${v}</td></tr>`;
+  return `
+    <div class="card kpi"><div class="lbl">Revenu imposable estimé</div><div class="val num">${eur(I.total)}</div>
+      <div class="sub">bénéfice BNC + net imposable des salaires</div>
+      <details class="calc-d"><summary>Détail du calcul</summary><table>
+        ${L("Recettes libérales encaissées",eur(I.recettes))}
+        ${I.regime==="micro"?L(`− Abattement micro-BNC ${pct(st.abattementMicro)} %`,"− "+eur(I.abat)):L("− Dépenses professionnelles","− "+eur(I.depenses))}
+        ${L("= Bénéfice BNC",eur(I.benef),1)}
+        ${L("+ Salaires : net imposable",eur(I.niSal))}
+        ${L("= Revenu imposable",eur(I.total),1)}
+      </table>${I.nbSansNI?`<p class="small warn-t">${I.nbSansNI} bulletin(s) sans net imposable : leur montant avant impôt (${eur(I.approx)}) est utilisé à la place. Complétez-les dans Salariat pour un chiffre exact.</p>`:""}
+      <p class="small muted">Base de la déclaration de revenus. Les recettes comptent à la date d'encaissement.</p></details></div>
+    ${tresoHTML()}`;
+}
+/* ---- Trésorerie : ce qui arrive réellement sur le compte, mois par mois ---- */
+function tresorerie(y=S.year){
+  const st=S.settings, M=()=>Array(12).fill(0), nowM=today().slice(0,7);
+  const enc=M(), prev=M(), sal=M(), urs=M(), ursInfo=Array.from({length:12},()=>[]);
+  live(S.remplacements).forEach(r=>{ const c=rempCalc(r);
+    if(c.percu && r.datePaiement && yearOf(r.datePaiement)===y) enc[monthOf(r.datePaiement)]+=c.percu;
+    if(c.reste>0){ const d=activiteDate(r); if(!d) return; let ym=d.slice(0,7); if(ym<nowM) ym=nowM; if(+ym.slice(0,4)===y) prev[+ym.slice(5)-1]+=c.reste; } });
+  live(S.salaires).forEach(s=>{ if(yearOf(s.periode)!==y) return; sal[monthOf(s.periode)] += (s.netPaye!==""&&s.netPaye!=null) ? num(s.netPaye) : salRevenu(s)-num(s.impotPreleve); });
+  // Estimation URSSAF mensuelle : barème appliqué au CA de chaque mois (date du remplacement), sur le cumul de l'année
+  const caM=M(); caPrevu(y).forEach(x=>caM[monthOf(x.d)]+=x.a);
+  const s1=st.rspmSeuil1; let cum=0;
+  caM.forEach((a,i)=>{ if(!a) return; const before=cum; cum+=a;
+    if(st.regimeSocial==="rspm"){
+      urs[i]=rspmCotis(cum)-rspmCotis(before);
+      const p1=r2(Math.max(0,Math.min(cum,s1)-Math.min(before,s1))), p2=r2(a-p1);
+      ursInfo[i].push([p1?`${eur(p1)} × ${pct(st.rspmTaux1)} %`:"", p2?`${eur(p2)} × ${pct(st.rspmTaux2)} %`:""].filter(Boolean).join(" + "));
+    } else if(num(st.tauxProvision)){ urs[i]=a*num(st.tauxProvision)/100; ursInfo[i].push(`${eur(a)} × ${pct(st.tauxProvision)} %`); }
+  });
+  const mois = enc.map((_,i)=>{ const reste=enc[i]+prev[i]+sal[i]-urs[i]; return {i,ym:`${y}-${pad(i+1)}`,enc:r2(enc[i]),prev:r2(prev[i]),sal:r2(sal[i]),urs:r2(urs[i]),info:ursInfo[i],reste:r2(reste)}; });
+  return {mois};
+}
+function tresoHTML(){
+  const st=S.settings, N=revenus().net, T=tresorerie(), nowM=today().slice(0,7);
+  const rows=T.mois.filter(m=>inP(m.ym)), t=rows.reduce((a,m)=>({e:a.e+m.enc+m.prev,p:a.p+m.prev,s:a.s+m.sal,u:a.u+m.urs,r:a.r+m.reste}),{e:0,p:0,s:0,u:0,r:0});
+  const L=(l,v,b)=>`<tr${b?' class="strong"':""}><td>${l}</td><td class="num">${v}</td></tr>`;
+  return `<div class="card kpi treso">
+    <div class="lbl">Revenu net estimé · ce qui arrive sur votre compte</div><div class="val num">${eur(t.r)}</div>
+    <div class="sub">chaque mois : rétrocessions + salaires nets − estimation URSSAF du mois (${pct(st.rspmTaux1)} % du CA cumulé jusqu'à ${eur0(st.rspmSeuil1)}, puis ${pct(st.rspmTaux2)} % jusqu'à ${eur0(st.rspmSeuil2)})</div>
+    <div class="scroll" style="margin-top:10px"><table class="grid-t">
+      <thead><tr><th style="text-align:left">Mois</th><th>Rétrocessions</th><th>Salaires nets</th><th>Estimation URSSAF</th><th>Sur le compte</th></tr></thead>
+      <tbody>${rows.map(m=>{ const fut=m.ym>nowM, cur=m.ym===nowM; return `<tr class="${cur?"cur-m":""} ${fut?"fut":""}">
+        <th>${MOIS[m.i].replace(".","")} ${S.year}${cur?' <span class="pill warn">en cours</span>':""}</th>
+        <td class="num" data-l="Rétrocessions">${eur(m.enc+m.prev)}${m.prev?`<div class="small muted">dont ${eur(m.prev)} attendus</div>`:""}</td>
+        <td class="num" data-l="Salaires nets">${m.sal?eur(m.sal):"—"}</td>
+        <td class="num" data-l="Estimation URSSAF">${m.urs?`<span class="neg">− ${eur(m.urs)}</span><div class="small muted">${m.info.join(", ")}</div>`:"—"}</td>
+        <td class="num" data-l="Sur le compte"><b class="${m.reste<0?"neg":""}">${eur(m.reste)}</b></td></tr>`; }).join("")}</tbody>
+      <tfoot><tr><th style="text-align:left">Total</th><td class="num" data-l="Rétrocessions">${eur(t.e)}</td><td class="num" data-l="Salaires nets">${eur(t.s)}</td><td class="num" data-l="Estimation URSSAF">− ${eur(t.u)}</td><td class="num" data-l="Sur le compte"><b>${eur(t.r)}</b></td></tr></tfoot>
+    </table></div>
+    <p class="small muted" style="margin:6px 0 0">L'estimation URSSAF de chaque mois est calculée sur le CA des remplacements du mois (payés ou attendus), avec le même barème que l'écran URSSAF : c'est la somme à mettre de côté ce mois-là, même si l'URSSAF la prélève plus tard. Les rétrocessions pas encore payées sont attendues au mois du remplacement (ou ce mois-ci si elles sont en retard). L'impôt sur le revenu libéral n'est pas déduit ici.</p>
+    <details class="calc-d"><summary>Revenu net annuel selon la méthode de votre Excel : <span class="num">${eur(N.total)}</span></summary><table>
+        ${L("CA déclaré (payé ou non)",eur(N.ca))}
+        ${L("− Cotisations URSSAF prélevées","− "+eur(N.cotP))}
+        ${L("= Libéral brut",eur(N.libBrut),1)}
+        ${L(`− Impôt estimé ${pct(st.impotLibAnnuel)} %`,"− "+eur(N.impLib))}
+        ${L("= Libéral net",eur(N.libNet),1)}
+        ${L("Salaires avant impôt",eur(N.sal))}
+        ${L("− Impôt déjà prélevé","− "+eur(N.pas))}
+        ${L(`− Impôt restant (${pct(st.impotSalariat)} % − déjà prélevé)`,"− "+eur(N.aPrelever))}
+        ${L("= Salariat net",eur(N.salNet),1)}
+        ${L("= Revenu net disponible",eur(N.total),1)}
+      </table>${N.ca&&N.cotP<N.ca*0.05?`<p class="small warn-t">Peu ou pas de cotisations prélevées enregistrées sur la période : le net est surestimé tant qu'elles ne sont pas saisies (dépenses, catégorie URSSAF).</p>`:""}
+      <p class="small muted">Les CA comptent au mois du remplacement. Taux d'impôt modifiables dans Réglages.</p></details>
+  </div>`;
+}
+
+function synthese(y=S.year){
+  const st=S.settings, Q=()=>Array(4).fill(0), q=d=>Math.floor(monthOf(d)/3);
+  const ca=Q(), cotR=Q(), cotP=Q(), sal=Q(), ni=Q(), pas=Q();
+  live(S.remplacements).forEach(r=>{ const d=activiteDate(r); if(!d||yearOf(d)!==y) return; const c=rempCalc(r); ca[q(d)]+=c.du||c.percu; cotR[q(d)]+=num(r.cotisReelles); });
+  live(S.depenses).forEach(d=>{ if(d.categorie==="urssaf" && yearOf(d.date)===y) cotP[q(d.date)]+=depDeductible(d); });
+  live(S.salaires).forEach(s=>{ if(yearOf(s.periode)!==y) return; const i=q(s.periode+"-15"); sal[i]+=salRevenu(s); ni[i]+=num(s.netImposable); pas[i]+=num(s.impotPreleve); });
+  const sum=a=>a.reduce((x,z)=>x+z,0);
+  const cotE=Q(); { let cum=0; for(const x of caPrevu(y)){ const b=cum; cum+=x.a; cotE[q(x.d)]+=rspmCotis(cum)-rspmCotis(b); } }
+  const brut = ca.map((v,i)=>v-cotP[i]);
+  const libBrut=sum(brut), libNet=libBrut*(1-st.impotLibAnnuel/100);
+  const revSal=sum(sal), pasTot=sum(pas), aPrelever=revSal*st.impotSalariat/100-pasTot, salNet=revSal-aPrelever-pasTot;
+  const netEstime = revSal + (sum(ca)-sum(cotR))*(1-st.impotLibMensuel/100) - pasTot;
+  return {ca,cotR,cotP,cotE,cotETot:sum(cotE),brut,sal,ni,pas,libBrut,libNet,libImpots:libBrut-libNet,revSal,pasTot,aPrelever,salNet,niTot:sum(ni),
+    totalNet:libNet+salNet, netEstime, caTot:sum(ca), cotRTot:sum(cotR), cotPTot:sum(cotP)};
+}
+
+/* ---- Alerte plafond régime simplifié ---- */
+function caPrevu(y=S.year){
+  return live(S.remplacements).map(r=>{ const c=rempCalc(r); return {d:activiteDate(r),a:c.du||c.percu,r}; })
+    .filter(x=>x.d&&x.a&&yearOf(x.d)===y).sort((a,b)=>a.d.localeCompare(b.d));
+}
+function rspmAlerte(y=S.year){
+  const st=S.settings; if(st.regimeSocial!=="rspm") return "";
+  let cum=0, c1=null, c2=null;
+  for(const x of caPrevu(y)){ cum+=x.a; if(!c1&&cum>=st.rspmSeuil1) c1=x; if(!c2&&cum>st.rspmSeuil2) c2=x; }
+  if(c2) return `<div class="banner bad"><div><b>⚠ Dépassement estimé du plafond du régime simplifié</b><br>
+    CA ${y} prévu : <b class="num">${eur(cum)}</b> (remplacements effectués et prévus), soit <b class="num">${eur(cum-st.rspmSeuil2)}</b> au-dessus du plafond de ${eur0(st.rspmSeuil2)}.
+    Le plafond est franchi avec le remplacement « ${esc(c2.r.medecin)} » du ${fdate(c2.d)}.
+    Au-delà de ce plafond, le régime simplifié n'est plus accessible : à anticiper avec l'URSSAF ou votre comptable.</div></div>`;
+  if(c1) return `<div class="banner warn"><div>CA ${y} prévu : <b class="num">${eur(cum)}</b>. Le seuil de ${eur0(st.rspmSeuil1)} est atteint le ${fdate(c1.d)} : au-delà, les cotisations passent à ${pct(st.rspmTaux2)} %.
+    Marge restante avant le plafond de ${eur0(st.rspmSeuil2)} : <b class="num">${eur(st.rspmSeuil2-cum)}</b>.</div></div>`;
+  return "";
+}
+
+/* ---- URSSAF ---- */
+function rspmCotis(x){ const st=S.settings; const a=Math.min(x,st.rspmSeuil1), b=Math.max(0,Math.min(x,st.rspmSeuil2)-st.rspmSeuil1), c=Math.max(0,x-st.rspmSeuil2);
+  return a*st.rspmTaux1/100 + (b+c)*st.rspmTaux2/100; }
+function urssafRows(y=S.year, base){
+  const st=S.settings; base = base || st.urssafBase; const mens=st.urssafPeriodicite==="M", n=mens?12:4;
+  const amt=Array(n).fill(0), reel=Array(n).fill(0), det=Array.from({length:n},()=>[]);
+  live(S.remplacements).forEach(r=>{
+    const c=rempCalc(r); let d,a;
+    if(base==="encaissement"){ d=r.datePaiement; a=c.percu; } else { d=r.dateFin||r.dateDebut; a=c.du||c.percu; }
+    if(!d||!a||yearOf(d)!==y) return;
+    const i = mens? monthOf(d) : Math.floor(monthOf(d)/3); amt[i]+=a; reel[i]+=num(r.cotisReelles); det[i].push({...r,...c,_d:d,_a:a});
+  });
+  const nowS=today(); let cum=0;
+  return amt.map((a,i)=>{
+    const before=cum; cum+=a;
+    const p = mens? "M"+pad(i+1) : "Q"+(i+1);
+    const key = `${y}-${mens?"M"+pad(i+1):"T"+(i+1)}`;
+    const end = periodRange(p,y)[1];
+    const cotis = st.regimeSocial==="rspm" ? rspmCotis(cum)-rspmCotis(before) : a*num(st.tauxProvision)/100;
+    const part1 = Math.max(0, Math.min(cum,st.rspmSeuil1)-Math.min(before,st.rspmSeuil1)), part2 = a-part1;
+    const allDecl = det[i].length && det[i].every(r=>r.declareUrssaf==="Oui");
+    const declared = (st.declarations||{})[key] || (allDecl ? "tous" : null);
+    let etat;
+    if(declared) etat=[declared==="tous"?"Déclaré":"Déclaré le "+fdate(declared),"ok"];
+    else if(nowS<=end && nowS>=periodRange(p,y)[0]) etat=["En cours","warn"];
+    else if(nowS<end) etat=["À venir",""];
+    else if(a>0) etat=["À déclarer","bad"];
+    else etat=["Rien à déclarer",""];
+    return {i,p,key,label:Object.fromEntries(PERIODES)[p],amt:r2(a),cum:r2(cum),before:r2(before),part1:r2(part1),part2:r2(part2),cotis:r2(cotis),reel:r2(reel[i]),nbNonDecl:det[i].filter(r=>r.declareUrssaf!=="Oui").length,det:det[i].sort((x,z)=>x._d.localeCompare(z._d)),declared,etat};
+  });
+}
+
+function allYears(){
+  const ys = new Set([new Date().getFullYear()]);
+  live(S.remplacements).forEach(r=>{ yearOf(r.dateDebut)&&ys.add(yearOf(r.dateDebut)); yearOf(r.datePaiement)&&ys.add(yearOf(r.datePaiement)); });
+  live(S.salaires).forEach(s=>yearOf(s.periode)&&ys.add(yearOf(s.periode)));
+  live(S.depenses).forEach(d=>yearOf(d.date)&&ys.add(yearOf(d.date)));
+  return [...ys].sort((a,b)=>b-a);
+}
+
+/* ======================= Navigation ======================= */
+const ICONS = {
+  dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+  remp:'<path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>',
+  hop:'<path d="M3 21h18M5 21V7l7-4 7 4v14M10 21v-5h4v5M12 8v4M10 10h4"/>',
+  dep:'<path d="M4 3h16v18l-3-2-3 2-2-2-2 2-3-2-3 2zM8 8h8M8 12h8M8 16h5"/>',
+  urs:'<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  set:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>'
+};
+const VIEWS = [["dash","Tableau de bord"],["remp","Remplacements"],["hop","Salariat"],["dep","Dépenses"],["urs","URSSAF"],["set","Réglages"]];
+function renderNav(){
+  $("#nav").innerHTML = VIEWS.map(([k,l])=>`<button data-v="${k}" class="${S.view===k||(S.view==="recap"&&k==="dash")?"active":""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg><span>${l}</span></button>`).join("");
+}
+$("#nav").addEventListener("click",e=>{ const b=e.target.closest("button[data-v]"); if(!b) return; S.view=b.dataset.v; render(); window.scrollTo(0,0); });
+$("#yearSel").addEventListener("change",e=>{ S.year=+e.target.value; render(); });
+$("#perSel").addEventListener("change",e=>{ S.period=e.target.value; render(); });
+
+function render(){
+  const ys = allYears(); if(!ys.includes(S.year)) ys.push(S.year), ys.sort((a,b)=>b-a);
+  $("#yearSel").innerHTML = ys.map(y=>`<option ${y===S.year?"selected":""}>${y}</option>`).join("");
+  $("#perSel").innerHTML = PERIODES.map(([k,l],i)=>(i===1?'<optgroup label="Trimestre">':i===5?'</optgroup><optgroup label="Mois">':"")+`<option value="${k}" ${S.period===k?"selected":""}>${l}</option>`).join("")+"</optgroup>";
+  $("#perSel").style.display = S.view==="urs" ? "none" : "";
+  $("#who").textContent = (S.settings.nom? "Dr "+S.settings.nom+" · " : "") + (S.settings.statut==="remplacant"?"Remplaçant":"Installé") + " · " + (S.settings.regime==="micro"?"micro-BNC":"déclaration contrôlée");
+  renderNav();
+  const v = $("#view");
+  ({dash:viewDash,remp:viewRemp,hop:viewHop,dep:viewDep,urs:viewUrs,set:viewSet,recap:viewRecap})[S.view](v);
+}
+
+/* ======================= Tableau de bord ======================= */
+function backupBanner(){
+  const lb = S.settings.lastBackup, n = live(S.remplacements).length+live(S.salaires).length+live(S.depenses).length;
+  if(!n) return "";
+  const days = lb ? Math.floor((Date.now()-lb)/864e5) : null;
+  if(days!==null && days < S.settings.rappelJours) return "";
+  return `<div class="banner warn no-print"><span>⚠ ${days===null?"Aucune sauvegarde réalisée pour l'instant.":`Dernière sauvegarde il y a ${days} jours.`} Les données ne sont stockées que dans ce navigateur.</span><button class="btn sm" data-act="backup">Sauvegarder maintenant</button></div>`;
+}
+function viewDash(v){
+  const y=S.year, st=S.settings, k=yearStats(y,inP), ky=S.period==="Y"?k:yearStats(y), P=periodLabel();
+  const urs = urssafRows(y), ursP = urs.filter(r=>{ const [a,b]=periodRange(r.p); const [c,d]=periodRange(); return a<=d && b>=c; });
+  const cotisP = r2(ursP.reduce((s,r)=>s+r.cotis,0));
+  const totalImp = k.impayes.reduce((a,b)=>a+b.reste,0);
+  const micro = st.regime==="micro";
+  let regimeNote = "";
+  if(micro && ky.recettes>st.seuilMicro) regimeNote = `<div class="banner warn">Les recettes ${y} (${eur0(ky.recettes)}) dépassent le seuil micro-BNC (${eur0(st.seuilMicro)}). Un dépassement deux années de suite fait passer en déclaration contrôlée : à vérifier avec votre AGA ou comptable.</div>`;
+  else if(micro && ky.recettes>0 && ky.tauxCharges>st.abattementMicro) regimeNote = `<div class="banner info">Vos dépenses réelles ${y} représentent ${ky.tauxCharges.toFixed(0)} % des recettes, au-dessus de l'abattement micro de ${st.abattementMicro} % : la déclaration contrôlée pourrait être plus avantageuse.</div>`;
+
+  v.innerHTML = `
+  ${backupBanner()}
+  ${rspmAlerte(y)}
+  <div class="head"><h1>Tableau de bord · ${P}</h1><span class="sp"></span>
+    <button class="btn" data-go="recap">Récapitulatif imprimable</button></div>
+  ${regimeNote}
+  <div class="grid kpis">
+    <div class="card kpi"><div class="lbl">Recettes libérales encaissées</div><div class="val num">${eur(k.recettes)}</div><div class="sub">${k.nbRemp} remplacement(s) · ${k.jours} jour(s)</div></div>
+    <div class="card kpi"><div class="lbl">Dépenses professionnelles</div><div class="val num">${eur(k.depenses)}</div><div class="sub">${micro?"non déduites en micro-BNC":"déductibles"}</div></div>
+    <div class="card kpi"><div class="lbl">Bénéfice BNC estimé</div><div class="val num">${eur(k.benef)}</div><div class="sub">${micro?`après abattement ${st.abattementMicro} %`:"recettes − dépenses"}</div></div>
+    <div class="card kpi"><div class="lbl">Salaires (avant impôt)</div><div class="val num">${eur(k.salaires)}</div><div class="sub">impôt prélevé : ${eur(k.salPas)} · net imposable : ${eur(k.salNetImp)}</div></div>
+    ${revenusHTML()}
+    <div class="card kpi"><div class="lbl">Rétrocessions à encaisser</div><div class="val num" style="color:${totalImp?"var(--bad)":"inherit"}">${eur(totalImp)}</div><div class="sub">${k.impayes.length} remplacement(s), toutes périodes</div></div>
+    <div class="card kpi"><div class="lbl">Cotisations URSSAF ${st.regimeSocial==="rspm"?"estimées":"à provisionner"}</div><div class="val num">${st.regimeSocial==="rspm"||num(st.tauxProvision)?eur(cotisP):"—"}</div><div class="sub">${st.regimeSocial==="rspm"?"régime simplifié (RSPM)":num(st.tauxProvision)?`provision ${num(st.tauxProvision)} % des recettes`:"taux de provision à régler dans Réglages"}</div></div>
+  </div>
+
+  ${S.period==="Y"?syntheseHTML(y):""}
+  <div class="grid two" style="margin-top:14px">
+    <div class="card">
+      <h2>Mois par mois · ${y}</h2>
+      <div class="legend"><span><i style="background:var(--s-rec)"></i>Recettes libérales</span><span><i style="background:var(--s-sal)"></i>Salaires</span><span><i style="background:var(--s-dep)"></i>Dépenses</span></div>
+      <div class="chart-wrap" id="chartM"></div>
+    </div>
+    <div class="card">
+      <h2>Micro-BNC ou déclaration contrôlée ?</h2>
+      <p class="small muted" style="margin:4px 0 12px">Comparaison du bénéfice imposable (${P}) selon le régime, avec les données saisies.</p>
+      <table class="list" style="box-shadow:none">
+        <tbody>
+          <tr><td data-l="">Recettes</td><td class="r num" data-l="">${eur(k.recettes)}</td></tr>
+          <tr><td data-l="">Micro-BNC (abattement ${st.abattementMicro} %)</td><td class="r num" data-l="">${eur(k.benefMicro)}</td></tr>
+          <tr><td data-l="">Déclaration contrôlée (frais réels)</td><td class="r num" data-l="">${eur(k.benefReel)}</td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:10px">${k.recettes? (k.benefReel<k.benefMicro? `Les frais réels donnent un bénéfice plus bas de <b class="num">${eur(k.benefMicro-k.benefReel)}</b>.` : `L'abattement forfaitaire donne un bénéfice plus bas de <b class="num">${eur(k.benefReel-k.benefMicro)}</b>.`) : "Saisissez des recettes pour voir la comparaison."}</p>
+      <p class="small muted">Indicatif : n'intègre pas les amortissements ni les cotisations futures. À valider avec un comptable ou l'AGA.</p>
+    </div>
+  </div>
+
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h2>Dépenses par catégorie</h2><div style="margin-top:12px" id="cats"></div></div>
+    <div class="card"><h2>Rétrocessions en attente</h2><div style="margin-top:10px">${
+      k.impayes.length ? `<table class="list"><tbody>${k.impayes.sort((a,b)=>(a.dateFin||"").localeCompare(b.dateFin||"")).map(r=>`<tr class="row" data-edit="remplacements:${r.id}"><td data-l="">${esc(r.medecin)}<div class="small muted">${fdate(r.dateDebut)} → ${fdate(r.dateFin)}</div></td><td class="r num" data-l="Reste">${eur(r.reste)}</td></tr>`).join("")}</tbody></table>`
+      : `<p class="muted small">Tout est encaissé.</p>`}</div></div>
+  </div>`;
+  drawMonthly($("#chartM"), k.months);
+  drawCats($("#cats"), k.byCat);
+}
+
+function syntheseHTML(y){
+  const z=synthese(y), st=S.settings, T=["1er trim.","2e trim.","3e trim.","4e trim."];
+  const line=(l,a,tot,b)=>`<tr${b?' class="strong"':""}><th>${l}</th>${a.map(v=>`<td class="num">${eur(v)}</td>`).join("")}<td class="num tot">${eur(tot)}</td></tr>`;
+  const s4=a=>a.reduce((x,v)=>x+v,0);
+  return `<div class="card synth" style="margin-top:14px">
+    <h2>Synthèse ${y} par trimestre</h2>
+    <p class="small muted" style="margin:4px 0 10px">Même logique que l'onglet « ${y} » de votre Excel : rétrocessions comptées au mois du remplacement (payées ou non), cotisations prélevées = dépenses de catégorie URSSAF.</p>
+    <div class="scroll"><table class="grid-t">
+      <thead><tr><th></th>${T.map(t=>`<th>${t}</th>`).join("")}<th>Total</th></tr></thead>
+      <tbody>
+        <tr class="sec"><th colspan="6">Libéral</th></tr>
+        ${line("CA déclaré",z.ca,z.caTot)}${line("Cotisations réelles (saisies)",z.cotR,z.cotRTot)}${st.regimeSocial==="rspm"?line(`Cotisations estimées (${pct(st.rspmTaux1)} % / ${pct(st.rspmTaux2)} %)`,z.cotE,z.cotETot):""}${line("Cotisations prélevées",z.cotP,z.cotPTot)}${line("Salaire brut",z.brut,z.libBrut,1)}
+        <tr class="sec"><th colspan="6">Salariat</th></tr>
+        ${line("Revenus",z.sal,z.revSal)}${line("Net imposable",z.ni,z.niTot)}${line("Impôts prélevés",z.pas,z.pasTot)}
+      </tbody></table></div>
+    <div class="grid kpis" style="margin-top:12px">
+      <div class="kpi"><div class="lbl">Total libéral brut</div><div class="val num">${eur(z.libBrut)}</div><div class="sub">net (−${pct(st.impotLibAnnuel)} % d'impôt) : ${eur(z.libNet)} · impôts à prévoir : ${eur(z.libImpots)}</div></div>
+      <div class="kpi"><div class="lbl">Total salariat net</div><div class="val num">${eur(z.salNet)}</div><div class="sub">impôts à prélever (${pct(st.impotSalariat)} % − déjà prélevés) : ${eur(z.aPrelever)}</div></div>
+      <div class="kpi"><div class="lbl">Total net annuel</div><div class="val num">${eur(z.totalNet)}</div><div class="sub">salaire net estimé (cumul mensuel) : ${eur(z.netEstime)}</div></div>
+    </div>
+  </div>`;
+}
+function drawMonthly(el, months){
+  const W=640,H=250,L=56,R=8,T=10,B=26, iw=W-L-R, ih=H-T-B;
+  const keys=[["rec","var(--s-rec)","Recettes libérales"],["sal","var(--s-sal)","Salaires"],["dep","var(--s-dep)","Dépenses"]];
+  const max = Math.max(100,...months.flatMap(m=>[m.rec,m.sal,m.dep]));
+  const step = niceStep(max/4), top = Math.ceil(max/step)*step;
+  const gw = iw/12, bw = Math.max(3,Math.min(12,(gw-10)/3-2));
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Recettes, salaires et dépenses par mois">`;
+  for(let v=0; v<=top+0.01; v+=step){ const yy=T+ih-(v/top)*ih; s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="${v===0?"#b9b5aa":"#e8e6df"}" stroke-width="1"/><text x="${L-6}" y="${yy+4}" text-anchor="end">${v>=1000?(v/1000).toLocaleString("fr-FR")+" k":v}</text>`; }
+  months.forEach((m,i)=>{
+    const gx = L+i*gw+(gw-(bw*3+4))/2;
+    keys.forEach(([k,c],j)=>{ const h=(m[k]/top)*ih; if(h>0){ const x=gx+j*(bw+2), y0=T+ih-h, r=Math.min(4,h,bw/2);
+      s+=`<path d="M${x},${T+ih} V${y0+r} Q${x},${y0} ${x+r},${y0} H${x+bw-r} Q${x+bw},${y0} ${x+bw},${y0+r} V${T+ih} Z" fill="${c}"/>`; } });
+    s+=`<rect x="${L+i*gw}" y="${T}" width="${gw}" height="${ih}" fill="transparent" data-i="${i}"/>`;
+    s+=`<text x="${L+i*gw+gw/2}" y="${H-8}" text-anchor="middle">${MOIS[i].replace(".","")}</text>`;
+  });
+  s+="</svg>";
+  el.innerHTML = s;
+  const tip=$("#tip");
+  el.querySelectorAll("rect[data-i]").forEach(r=>{
+    const show=e=>{ const m=months[+r.dataset.i]; tip.innerHTML=`<b>${MOIS[+r.dataset.i]} ${S.year}</b>`+keys.map(([k,,l])=>`${l} : ${eur(m[k])}`).join("<br>"); tip.style.opacity=1;
+      const p=(e.touches?e.touches[0]:e); tip.style.left=Math.min(window.innerWidth-220,p.clientX+12)+"px"; tip.style.top=(p.clientY+window.scrollY-10)+"px"; tip.style.position="absolute"; r.setAttribute("fill","rgba(23,65,79,.06)"); };
+    r.addEventListener("mousemove",show); r.addEventListener("touchstart",show,{passive:true});
+    r.addEventListener("mouseleave",()=>{tip.style.opacity=0; r.setAttribute("fill","transparent");});
+  });
+}
+function niceStep(x){ const p=Math.pow(10,Math.floor(Math.log10(x))); const f=x/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p; }
+function drawCats(el, byCat){
+  const arr = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  if(!arr.length){ el.innerHTML=`<p class="muted small">Aucune dépense sur l'année.</p>`; return; }
+  const max = arr[0][1];
+  el.innerHTML = `<div class="hbar">${arr.map(([c,v])=>`<span>${esc((CAT[c]||c).split(" (")[0])}</span><div class="track"><div class="bar" style="width:${Math.max(2,v/max*100)}%" title="${esc(CAT[c]||c)} : ${eur(v)}"></div></div><span class="num">${eur(v)}</span>`).join("")}</div>`;
+}
+
+/* ======================= Remplacements ======================= */
+const F = S.filters;
+function viewRemp(v){
+  const y=periodLabel(), fs=F.rempStatut||"";
+  let rows = live(S.remplacements).filter(r=>inP(r.dateDebut) || inP(r.datePaiement) || inP(r.dateFin));
+  rows = rows.map(r=>({...r,...rempCalc(r)})).filter(r=>!fs||r.statut===fs).sort((a,b)=>(b.dateDebut||"").localeCompare(a.dateDebut||""));
+  const tot = rows.reduce((a,r)=>({j:a.j+num(r.jours),du:a.du+r.du,p:a.p+r.percu,re:a.re+r.reste}),{j:0,du:0,p:0,re:0});
+  v.innerHTML = `
+  ${rspmAlerte(S.year)}
+  <div class="head"><h1>Remplacements ${y}</h1><span class="sp"></span>
+    <button class="btn primary" data-new="remplacements">+ Nouveau remplacement</button></div>
+  <div class="filters">
+    <select data-filter="rempStatut"><option value="">Tous les statuts</option>${Object.entries(STATUT_LBL).map(([k,[l]])=>`<option value="${k}" ${fs===k?"selected":""}>${l}</option>`).join("")}</select>
+  </div>
+  ${rows.length? `<table class="list"><thead><tr><th>Période</th><th>Médecin remplacé</th><th>Lieu</th><th class="r">Jours</th><th class="r">Rétrocession due</th><th class="r">Perçu</th><th>Statut</th></tr></thead>
+  <tbody>${rows.map(r=>`<tr class="row" data-edit="remplacements:${r.id}">
+    <td data-l="Période">${fdate(r.dateDebut)} → ${fdate(r.dateFin)}</td>
+    <td data-l="Médecin">${esc(r.medecin)}</td>
+    <td data-l="Lieu">${esc(r.lieu||"—")}</td>
+    <td class="r num" data-l="Jours">${num(r.jours)}</td>
+    <td class="r num" data-l="Due">${eur(r.du)}${r.taux?`<div class="small muted">${num(r.taux)} %</div>`:""}</td>
+    <td class="r num" data-l="Perçu">${eur(r.percu)}${r.datePaiement?`<div class="small muted">le ${fdate(r.datePaiement)}</div>`:""}</td>
+    <td data-l="Statut"><span class="pill ${STATUT_LBL[r.statut][1]}">${STATUT_LBL[r.statut][0]}</span><div class="small muted">URSSAF : ${r.declareUrssaf==="Oui"?"déclaré":"non déclaré"}${num(r.cotisReelles)?" · "+eur(r.cotisReelles):""}</div></td></tr>`).join("")}</tbody>
+  <tfoot><tr><td data-l="">Total</td><td data-l=""></td><td data-l=""></td><td class="r num" data-l="Jours">${tot.j}</td><td class="r num" data-l="Dû">${eur(tot.du)}</td><td class="r num" data-l="Perçu">${eur(tot.p)}</td><td data-l="Reste">${tot.re?eur(tot.re)+" à encaisser":""}</td></tr></tfoot></table>`
+  : `<div class="card empty">Aucun remplacement pour ${y}.<br><br><button class="btn primary" data-new="remplacements">Ajouter le premier</button></div>`}
+  <p class="small muted" style="margin-top:12px">La recette est comptée à la date d'encaissement (comptabilité de caisse) : un remplacement de décembre payé en janvier compte dans l'année suivante.</p>`;
+}
+
+/* ======================= Hôpital ======================= */
+function viewHop(v){
+  const y=periodLabel();
+  const rows = live(S.salaires).filter(s=>inP(s.periode)).sort((a,b)=>(b.periode||"").localeCompare(a.periode||""));
+  const tot = rows.reduce((a,s)=>({r:a.r+salRevenu(s),x:a.x+num(s.impotPreleve),i:a.i+num(s.netImposable),p:a.p+num(s.netPaye)}),{r:0,x:0,i:0,p:0});
+  v.innerHTML = `
+  <div class="head"><h1>Salariat (hôpital, centres…) · ${y}</h1><span class="sp"></span>
+    <button class="btn primary" data-new="salaires">+ Nouveau bulletin</button></div>
+  ${rows.length? `<table class="list"><thead><tr><th>Mois</th><th>Établissement</th><th>Versé le</th><th class="r">Avant impôt</th><th class="r">Impôt prélevé</th><th class="r">Net versé</th><th class="r">Net imposable</th></tr></thead>
+  <tbody>${rows.map(s=>`<tr class="row" data-edit="salaires:${s.id}">
+    <td data-l="Mois">${fmonth(s.periode)}</td><td data-l="Établissement">${esc(s.etablissement||"—")}<div class="small muted">${esc(s.type||"")}</div></td><td data-l="Versé le">${fdate(s.dateVersement)}</td>
+    <td class="r num" data-l="Avant impôt">${eur(salRevenu(s))}</td><td class="r num" data-l="Impôt prélevé">${eur(s.impotPreleve)}</td><td class="r num" data-l="Net versé">${eur(s.netPaye)}</td><td class="r num" data-l="Net imposable">${s.netImposable!==""&&s.netImposable!=null?eur(s.netImposable):"—"}</td></tr>`).join("")}</tbody>
+  <tfoot><tr><td data-l="">Total</td><td data-l=""></td><td data-l=""></td><td class="r num" data-l="Avant impôt">${eur(tot.r)}</td><td class="r num" data-l="Impôt prélevé">${eur(tot.x)}</td><td class="r num" data-l="Net versé">${eur(tot.p)}</td><td class="r num" data-l="Net imposable">${eur(tot.i)}</td></tr></tfoot></table>`
+  : `<div class="card empty">Aucun bulletin pour ${y}.<br><br><button class="btn primary" data-new="salaires">Ajouter un bulletin</button></div>`}
+  <p class="small muted" style="margin-top:12px">Les salaires hospitaliers relèvent des « traitements et salaires » (déclaration 2042) et non des BNC. Ils apparaissent ici pour la vue d'ensemble du revenu.</p>`;
+}
+
+/* ======================= Dépenses ======================= */
+function viewDep(v){
+  const y=periodLabel(), fc=F.depCat||"";
+  const rows = live(S.depenses).filter(d=>inP(d.date) && (!fc||d.categorie===fc)).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const tot = rows.reduce((a,d)=>({m:a.m+num(d.montant),d:a.d+depDeductible(d)}),{m:0,d:0});
+  const micro = S.settings.regime==="micro";
+  v.innerHTML = `
+  <div class="head"><h1>Dépenses ${y}</h1><span class="sp"></span>
+    <button class="btn primary" data-new="depenses">+ Nouvelle dépense</button></div>
+  ${micro?`<div class="banner info small">En micro-BNC, les dépenses ne sont pas déduites (l'abattement de ${S.settings.abattementMicro} % les remplace). Les noter reste utile pour comparer les régimes et préparer l'installation.</div>`:""}
+  <div class="filters"><select data-filter="depCat"><option value="">Toutes les catégories</option>${CATEGORIES.map(([k,l])=>`<option value="${k}" ${fc===k?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+  ${rows.length? `<table class="list"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="r">Montant</th><th class="r">Part pro</th><th class="r">Déductible</th><th></th></tr></thead>
+  <tbody>${rows.map(d=>`<tr class="row" data-edit="depenses:${d.id}">
+    <td data-l="Date">${fdate(d.date)}</td><td data-l="Libellé">${esc(d.libelle)}</td><td data-l="Catégorie" class="small">${esc((CAT[d.categorie]||"").split(" (")[0])}</td>
+    <td class="r num" data-l="Montant">${eur(d.montant)}</td><td class="r num" data-l="Part pro">${num(d.partPro??100)} %</td><td class="r num" data-l="Déductible">${eur(depDeductible(d))}</td>
+    <td data-l="Justificatif">${d.fichierId?`<button class="btn sm ghost" data-file="${d.fichierId}" title="Voir le justificatif">📎</button>`:`<span class="muted small">—</span>`}</td></tr>`).join("")}</tbody>
+  <tfoot><tr><td data-l="">Total</td><td data-l=""></td><td data-l=""></td><td class="r num" data-l="Montant">${eur(tot.m)}</td><td data-l=""></td><td class="r num" data-l="Déductible">${eur(tot.d)}</td><td data-l=""></td></tr></tfoot></table>`
+  : `<div class="card empty">Aucune dépense ${fc?"dans cette catégorie ":""}pour ${y}.<br><br><button class="btn primary" data-new="depenses">Ajouter une dépense</button></div>`}`;
+}
+
+/* ======================= URSSAF ======================= */
+function viewUrs(v){
+  const st=S.settings, y=S.year, rows=urssafRows(y), rspm=st.regimeSocial==="rspm", mens=st.urssafPeriodicite==="M";
+  const tot = rows.reduce((a,r)=>({m:a.m+r.amt,c:a.c+r.cotis,re:a.re+r.reel}),{m:0,c:0,re:0});
+  if(rspm && rows.length) tot.c = rspmCotis(rows[rows.length-1].cum);
+  const aFaire = rows.filter(r=>r.etat[0]==="À déclarer");
+  const curKey = rows.find(r=>r.etat[0]==="En cours")?.key;
+  v.innerHTML = `
+  <div class="head"><h1>Déclarations URSSAF ${y}</h1><span class="sp"></span>
+    <div class="seg" role="group" aria-label="Périodicité"><button data-per="M" class="${mens?"on":""}">Mensuel</button><button data-per="T" class="${!mens?"on":""}">Trimestriel</button></div></div>
+  ${rspmAlerte(y)}
+  ${aFaire.length?`<div class="banner warn">${aFaire.length} période(s) terminée(s) non marquée(s) comme déclarée(s) : ${aFaire.map(r=>r.label).join(", ")}.</div>`:""}
+  <div class="banner info small"><div>${rspm
+    ? `<b>Calcul des cotisations estimées</b> (régime simplifié) : ${pct(st.rspmTaux1)} % sur la part du CA cumulé de l'année comprise entre 0 et ${eur0(st.rspmSeuil1-1)}, puis ${pct(st.rspmTaux2)} % sur la part comprise entre ${eur0(st.rspmSeuil1)} et ${eur0(st.rspmSeuil2)}. Le cumul repart de zéro au 1er janvier.
+      La colonne « saisies » reprend les montants inscrits dans chaque fiche (issus de votre Excel), pour comparaison.<br>`
+    : `Régime classique (PAMC) : l'URSSAF calcule les cotisations à partir de la déclaration annuelle de revenus. Ce tableau sert à suivre les recettes ${mens?"mensuelles":"trimestrielles"} et à mettre de côté${num(st.tauxProvision)?` (provision de ${num(st.tauxProvision)} %)`:" — réglez un taux de provision dans Réglages"}.`}
+    Montants retenus à la date d'<b>${st.urssafBase==="encaissement"?"encaissement":"fin du remplacement"}</b> (modifiable dans Réglages).</div></div>
+  <table class="list"><thead><tr><th>Période</th><th class="r">Rétrocessions à déclarer</th><th class="r">Cumul ${y}</th><th class="r">${rspm?`Cotisations estimées (${pct(st.rspmTaux1)} % / ${pct(st.rspmTaux2)} %)`:"Provision"}</th><th class="r">Cotisations saisies</th><th>État</th><th></th></tr></thead>
+  <tbody>${rows.map(r=>`<tr class="row ${r.key===curKey?"cur":""}" data-urs="${r.key}">
+    <td data-l="Période" style="white-space:nowrap"><b>${r.label}</b>${r.det.length?`<div class="small muted">${r.det.length} remplacement(s) ${S.filters.ursOpen===r.key?"▴":"▾"}</div>`:""}</td>
+    <td class="r num" data-l="À déclarer"><b>${eur(r.amt)}</b></td>
+    <td class="r num ${rspm&&r.cum>st.rspmSeuil2?"cum-bad":""}" data-l="Cumul">${eur(r.cum)}${rspm&&r.cum>st.rspmSeuil2&&r.before<=st.rspmSeuil2?`<div class="small">plafond dépassé</div>`:""}</td>
+    <td class="r num" data-l="${rspm?"Cotisations estimées":"Provision"}">${rspm||num(st.tauxProvision)?`<b>${eur(r.cotis)}</b>`:"—"}${rspm&&r.amt?`<div class="small muted">${r.part1&&r.part2?`${eur(r.part1)} × ${pct(st.rspmTaux1)} % + ${eur(r.part2)} × ${pct(st.rspmTaux2)} %`:r.part2?`${eur(r.part2)} × ${pct(st.rspmTaux2)} %`:`${eur(r.part1)} × ${pct(st.rspmTaux1)} %`}</div>`:""}</td>
+    <td class="r num" data-l="Cotisations saisies">${r.reel?eur(r.reel):"—"}</td>
+    <td data-l="État">${r.etat[1]?`<span class="pill ${r.etat[1]}">${r.etat[0]}</span>`:`<span class="muted small">${r.etat[0]}</span>`}${!r.declared&&r.det.length&&r.nbNonDecl<r.det.length?`<div class="small muted">${r.det.length-r.nbNonDecl}/${r.det.length} déclaré(s)</div>`:""}</td>
+    <td data-l="">${r.declared==="tous"?"":r.declared?`<button class="btn sm ghost" data-decl="${r.key}">Annuler</button>`:(r.etat[0]==="À déclarer"||r.etat[0]==="En cours"||r.amt>0?`<button class="btn sm" data-decl="${r.key}">Marquer déclaré</button>`:"")}</td></tr>
+    ${S.filters.ursOpen===r.key?`<tr class="detail"><td colspan="7" data-l="">${r.det.length? r.det.map(d=>`${esc(d.medecin)} · ${fdate(d.dateDebut)} → ${fdate(d.dateFin)} · ${st.urssafBase==="encaissement"?"encaissé le":"terminé le"} ${fdate(d._d)} · <b class="num">${eur(d._a)}</b>${num(d.cotisReelles)?` · cotisations ${eur(d.cotisReelles)}`:""} · ${d.declareUrssaf==="Oui"?"déclaré":"<b>non déclaré</b>"}`).join("<br>") : "Aucun remplacement sur la période."}</td></tr>`:""}`).join("")}</tbody>
+  <tfoot><tr><td data-l="">Total ${y}</td><td class="r num" data-l="Total">${eur(tot.m)}</td><td data-l=""></td><td class="r num" data-l="${rspm?"Cotisations estimées":"Provision"}">${rspm||num(st.tauxProvision)?eur(tot.c):"—"}</td><td class="r num" data-l="Cotisations saisies">${eur(tot.re)}</td><td data-l=""></td><td data-l=""></td></tr></tfoot></table>
+  <p class="small muted" style="margin-top:12px">Estimations indicatives : le montant exact est celui calculé par l'URSSAF lors de la déclaration. Touchez une ligne pour voir le détail des remplacements.</p>`;
+}
+
+/* ======================= Réglages & sauvegarde ======================= */
+function viewSet(v){
+  const st=S.settings, lb=st.lastBackup;
+  v.innerHTML = `
+  <div class="head"><h1>Réglages</h1></div>
+  <div class="grid setgrid">
+    <form class="card stack" id="setForm">
+      <h2>Profil</h2>
+      <div class="field"><label>Nom</label><input name="nom" value="${esc(st.nom)}" placeholder="ex. Martin"></div>
+      <div class="field"><label>N° RPPS (facultatif)</label><input name="rpps" value="${esc(st.rpps)}" inputmode="numeric"></div>
+      <div class="field"><label>Statut</label><select name="statut"><option value="remplacant" ${st.statut==="remplacant"?"selected":""}>Remplaçant</option><option value="installe" ${st.statut==="installe"?"selected":""}>Installé en cabinet</option></select>
+        <div class="hint">Le module « recettes du cabinet » arrivera avec la version Installé.</div></div>
+      <div class="field"><label>Régime fiscal BNC</label><select name="regime"><option value="micro" ${st.regime==="micro"?"selected":""}>Micro-BNC</option><option value="reel" ${st.regime==="reel"?"selected":""}>Déclaration contrôlée (2035)</option></select></div>
+      <h2 style="margin-top:8px">Paramètres</h2>
+      <div class="fgrid">
+        <div class="field"><label>Seuil micro-BNC (€)</label><input name="seuilMicro" inputmode="decimal" value="${st.seuilMicro}"><div class="hint">83 600 € pour 2026–2028</div></div>
+        <div class="field"><label>Abattement micro (%)</label><input name="abattementMicro" inputmode="decimal" value="${st.abattementMicro}"></div>
+        <div class="field"><label>Taux de rétrocession par défaut (%)</label><input name="tauxRetroDefaut" inputmode="decimal" value="${st.tauxRetroDefaut}"></div>
+        <div class="field"><label>Rappel de sauvegarde (jours)</label><input name="rappelJours" inputmode="numeric" value="${st.rappelJours}"></div>
+      </div>
+      <h2 style="margin-top:8px">URSSAF</h2>
+      <div class="fgrid">
+        <div class="field full"><label>Régime social</label><select name="regimeSocial"><option value="pamc" ${st.regimeSocial==="pamc"?"selected":""}>Régime classique (PAMC)</option><option value="rspm" ${st.regimeSocial==="rspm"?"selected":""}>Régime simplifié médecins remplaçants (RSPM)</option></select></div>
+        <div class="field"><label>Déclaration</label><select name="urssafPeriodicite"><option value="M" ${st.urssafPeriodicite==="M"?"selected":""}>Mensuelle</option><option value="T" ${st.urssafPeriodicite==="T"?"selected":""}>Trimestrielle</option></select></div>
+        <div class="field"><label>Date retenue</label><select name="urssafBase"><option value="encaissement" ${st.urssafBase==="encaissement"?"selected":""}>Date d'encaissement</option><option value="activite" ${st.urssafBase==="activite"?"selected":""}>Date de fin du remplacement</option></select></div>
+        <div class="field"><label>RSPM : 1er seuil (€)</label><input name="rspmSeuil1" inputmode="decimal" value="${st.rspmSeuil1}"></div>
+        <div class="field"><label>RSPM : taux jusqu'au seuil (%)</label><input name="rspmTaux1" inputmode="decimal" value="${String(st.rspmTaux1).replace(".",",")}"></div>
+        <div class="field"><label>RSPM : plafond (€)</label><input name="rspmSeuil2" inputmode="decimal" value="${st.rspmSeuil2}"></div>
+        <div class="field"><label>RSPM : taux au-delà (%)</label><input name="rspmTaux2" inputmode="decimal" value="${String(st.rspmTaux2).replace(".",",")}"></div>
+        <div class="field"><label>Synthèse : impôt estimé libéral (%)</label><input name="impotLibAnnuel" inputmode="decimal" value="${pct(st.impotLibAnnuel)}"><div class="hint">Total libéral net = brut − ce %</div></div>
+        <div class="field"><label>Synthèse : impôt estimé libéral, calcul mensuel (%)</label><input name="impotLibMensuel" inputmode="decimal" value="${pct(st.impotLibMensuel)}"></div>
+        <div class="field"><label>Synthèse : taux d'impôt salariat (%)</label><input name="impotSalariat" inputmode="decimal" value="${pct(st.impotSalariat)}"></div>
+        <div class="field full"><label>Régime classique : provision à mettre de côté (% des recettes)</label><input name="tauxProvision" inputmode="decimal" value="${String(st.tauxProvision).replace(".",",")}"><div class="hint">Facultatif, à fixer avec votre comptable</div></div>
+      </div>
+      <div><button class="btn primary" type="submit">Enregistrer</button></div>
+    </form>
+
+    <div class="stack">
+      <div class="card stack">
+        <h2>Sauvegarde et synchronisation</h2>
+        <p class="small">Les données restent uniquement dans ce navigateur, sur cet appareil. Pour ne rien perdre et passer de l'ordinateur au téléphone : <b>sauvegardez</b> ici, transférez le fichier (câble, e-mail à vous-même, clé USB…), puis <b>importez-le</b> sur l'autre appareil. L'import fusionne : la version la plus récente de chaque élément est conservée.</p>
+        <p class="small muted">Dernière sauvegarde : ${lb? new Date(lb).toLocaleString("fr-FR") : "jamais"}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" data-act="backup">Sauvegarder (fichier)</button>
+          ${navigator.canShare?`<button class="btn" data-act="share">Partager la sauvegarde</button>`:""}
+          <button class="btn" data-act="import">Importer / synchroniser</button>
+        </div>
+        <p class="small muted" id="persist"></p>
+      </div>
+      <div class="card stack">
+        <h2>Exports pour le comptable (${periodLabel()})</h2>
+        <p class="small muted">Fichiers CSV lisibles dans Excel. La période se choisit en haut de l'écran.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" data-csv="journal">Livre-journal des recettes</button>
+          <button class="btn" data-csv="remplacements">Remplacements</button>
+          <button class="btn" data-csv="depenses">Dépenses</button>
+          <button class="btn" data-csv="salaires">Salaires hospitaliers</button>
+        </div>
+      </div>
+      <div class="card stack">
+        <h2>Zone sensible</h2>
+        <p class="small muted">Efface toutes les données de cet appareil. Faites une sauvegarde avant.</p>
+        <div><button class="btn danger" data-act="wipe">Tout effacer sur cet appareil</button></div>
+      </div>
+    </div>
+  </div>`;
+  if(navigator.storage&&navigator.storage.persisted) navigator.storage.persisted().then(p=>{ const el=$("#persist"); if(el) el.textContent = p? "✓ Stockage protégé : le navigateur ne l'effacera pas automatiquement." : "Stockage non protégé : le navigateur peut l'effacer s'il manque d'espace. Sauvegardez régulièrement."; });
+  $("#setForm").addEventListener("submit",async e=>{
+    e.preventDefault(); const fd=new FormData(e.target);
+    ["nom","rpps","statut","regime","regimeSocial","urssafPeriodicite","urssafBase"].forEach(k=>st[k]=fd.get(k).trim());
+    ["seuilMicro","abattementMicro","tauxRetroDefaut","rappelJours","rspmSeuil1","rspmTaux1","rspmSeuil2","rspmTaux2","tauxProvision","impotLibAnnuel","impotLibMensuel","impotSalariat"].forEach(k=>st[k]=num(fd.get(k)));
+    await saveSettings(); toast("Réglages enregistrés"); render();
+  });
+}
+
+/* ======================= Récapitulatif imprimable ======================= */
+function viewRecap(v){
+  const y=periodLabel(),k=yearStats(S.year,inP),st=S.settings;
+  const remps = live(S.remplacements).filter(r=>inP(r.datePaiement)&&num(r.montantPercu)).sort((a,b)=>a.datePaiement.localeCompare(b.datePaiement));
+  const etab = {}; live(S.salaires).filter(s=>inP(s.periode)).forEach(s=>{ const e=s.etablissement||"—"; etab[e]=(etab[e]||0)+salRevenu(s); });
+  v.innerHTML = `
+  <div class="head no-print"><button class="btn" data-go="dash">← Retour</button><span class="sp"></span><button class="btn primary" data-act="print">Imprimer / PDF</button></div>
+  <h1>Récapitulatif ${y}${st.nom?" — Dr "+esc(st.nom):""}</h1>
+  <p class="muted small">${st.statut==="remplacant"?"Médecin remplaçant":"Médecin installé"} · ${st.regime==="micro"?"Micro-BNC":"Déclaration contrôlée"}${st.rpps?" · RPPS "+esc(st.rpps):""} · édité le ${new Date().toLocaleDateString("fr-FR")}</p>
+  <div class="grid kpis" style="margin:14px 0">
+    <div class="card kpi"><div class="lbl">Recettes BNC encaissées</div><div class="val num">${eur(k.recettes)}</div></div>
+    <div class="card kpi"><div class="lbl">Dépenses professionnelles</div><div class="val num">${eur(k.depenses)}</div></div>
+    <div class="card kpi"><div class="lbl">Bénéfice ${st.regime==="micro"?"micro (abattement)":"réel"}</div><div class="val num">${eur(k.benef)}</div></div>
+    <div class="card kpi"><div class="lbl">Salaires (avant impôt)</div><div class="val num">${eur(k.salaires)}</div></div>
+  </div>
+  <h2 class="section-title">Livre-journal des recettes</h2>
+  ${remps.length?`<table class="list"><thead><tr><th>Encaissé le</th><th>Origine</th><th>Mode</th><th class="r">Montant</th></tr></thead><tbody>${remps.map(r=>`<tr><td data-l="Date">${fdate(r.datePaiement)}</td><td data-l="Origine">Rétrocession ${esc(r.medecin)} (${fdate(r.dateDebut)} → ${fdate(r.dateFin)})</td><td data-l="Mode">${esc(r.modePaiement||"")}</td><td class="r num" data-l="Montant">${eur(r.montantPercu)}</td></tr>`).join("")}</tbody><tfoot><tr><td data-l="">Total</td><td data-l=""></td><td data-l=""></td><td class="r num" data-l="">${eur(k.recettes)}</td></tr></tfoot></table>`:`<p class="muted">Aucune recette encaissée.</p>`}
+  <h2 class="section-title">Dépenses par catégorie</h2>
+  ${Object.keys(k.byCat).length?`<table class="list"><thead><tr><th>Catégorie</th><th class="r">Montant déductible</th></tr></thead><tbody>${CATEGORIES.filter(([c])=>k.byCat[c]).map(([c,l])=>`<tr><td data-l="">${esc(l)}</td><td class="r num" data-l="">${eur(k.byCat[c])}</td></tr>`).join("")}</tbody><tfoot><tr><td data-l="">Total</td><td class="r num" data-l="">${eur(k.depenses)}</td></tr></tfoot></table>`:`<p class="muted">Aucune dépense.</p>`}
+  <h2 class="section-title">Salaires hospitaliers par établissement</h2>
+  ${Object.keys(etab).length?`<table class="list"><tbody>${Object.entries(etab).map(([e,v])=>`<tr><td data-l="">${esc(e)}</td><td class="r num" data-l="">${eur(v)}</td></tr>`).join("")}</tbody><tfoot><tr><td data-l="">Total avant impôt</td><td class="r num" data-l="">${eur(k.salaires)}</td></tr></tfoot></table>`:`<p class="muted">Aucun salaire.</p>`}
+  <p class="small muted" style="margin-top:18px">Document de travail indicatif, à faire valider par un expert-comptable ou l'AGA.</p>`;
+}
+
+/* ======================= Formulaires ======================= */
+const FORMS = {
+  remplacements:{ title:"Remplacement", fields:[
+    {k:"medecin",l:"Médecin remplacé / structure",req:1,ph:"ex. Dr Durand, OMECARE…"},
+    {k:"lieu",l:"Lieu / cabinet",ph:"ex. Cabinet de Lyon 3e"},
+    {k:"dateDebut",l:"Du",t:"date",req:1},{k:"dateFin",l:"Au",t:"date",req:1},
+    {k:"jours",l:"Jours travaillés",t:"dec",hint:"Calculé depuis les dates, modifiable"},
+    {k:"honoraires",l:"Honoraires générés (€)",t:"dec",hint:"Total encaissé pendant le remplacement"},
+    {k:"taux",l:"Taux de rétrocession (%)",t:"dec",hint:"Part qui vous revient"},
+    {k:"montantDu",l:"Rétrocession due (€)",t:"dec",hint:"Calculée : honoraires × taux"},
+    {k:"montantPercu",l:"Montant perçu (€)",t:"dec"},
+    {k:"datePaiement",l:"Date d'encaissement",t:"date"},
+    {k:"modePaiement",l:"Mode de paiement",t:"sel",o:MODES},
+    {k:"cotisReelles",l:"Cotisations URSSAF (€)",t:"dec",hint:"Montant réellement dû / payé pour ce remplacement"},
+    {k:"declareUrssaf",l:"Déclaré à l'URSSAF ?",t:"sel",o:["Oui","Non"]},
+    {k:"notes",l:"Notes",t:"area",full:1}
+  ]},
+  salaires:{ title:"Bulletin de salaire", fields:[
+    {k:"periode",l:"Mois concerné",t:"month",req:1},
+    {k:"etablissement",l:"Employeur / établissement",req:1,ph:"ex. CH de Vienne, FILIERIS…"},
+    {k:"type",l:"Type",t:"sel",o:TYPES_SAL},
+    {k:"dateVersement",l:"Versé le",t:"date"},
+    {k:"netAvantImpot",l:"Net à payer avant impôt (€)",t:"dec",req:1,hint:"Ligne « net à payer avant impôt sur le revenu »"},
+    {k:"impotPreleve",l:"Impôt prélevé à la source (€)",t:"dec"},
+    {k:"netImposable",l:"Net imposable (€)",t:"dec",hint:"Ligne « net imposable » du bulletin"},
+    {k:"netPaye",l:"Net versé (€)",t:"dec",hint:"Calculé : avant impôt − impôt prélevé"},
+    {k:"notes",l:"Notes",t:"area",full:1}
+  ]},
+  depenses:{ title:"Dépense", fields:[
+    {k:"date",l:"Date",t:"date",req:1},
+    {k:"montant",l:"Montant TTC (€)",t:"dec",req:1},
+    {k:"libelle",l:"Libellé",req:1,full:1,ph:"ex. Stéthoscope, congrès CMGF…"},
+    {k:"categorie",l:"Catégorie",t:"sel",o:CATEGORIES,req:1,full:1},
+    {k:"partPro",l:"Part professionnelle (%)",t:"dec",hint:"100 % sauf usage mixte (téléphone, voiture…)"},
+    {k:"modePaiement",l:"Mode de paiement",t:"sel",o:MODES},
+    {k:"justificatif",l:"Justificatif (photo ou PDF)",t:"file",full:1},
+    {k:"notes",l:"Notes",t:"area",full:1}
+  ]}
+};
+function fieldHTML(f,val){
+  const id="f_"+f.k, req=f.req?"required":"", v=esc(val??"");
+  let inp;
+  switch(f.t){
+    case "date": inp=`<input type="date" id="${id}" name="${f.k}" value="${v}" ${req}>`; break;
+    case "month": inp=`<input type="month" id="${id}" name="${f.k}" value="${v}" ${req}>`; break;
+    case "dec": inp=`<input type="text" inputmode="decimal" id="${id}" name="${f.k}" value="${val===""||val==null?"":String(val).replace(".",",")}" ${req} autocomplete="off">`; break;
+    case "sel": inp=`<select id="${id}" name="${f.k}" ${req}><option value="">—</option>${f.o.map(o=>{const [k,l]=Array.isArray(o)?o:[o,o]; return `<option value="${esc(k)}" ${val===k?"selected":""}>${esc(l)}</option>`;}).join("")}</select>`; break;
+    case "area": inp=`<textarea id="${id}" name="${f.k}">${v}</textarea>`; break;
+    case "file": inp=`<input type="file" id="${id}" name="${f.k}" accept="image/*,application/pdf"><div class="hint" id="fileInfo"></div>`; break;
+    default: inp=`<input type="text" id="${id}" name="${f.k}" value="${v}" ${req} placeholder="${esc(f.ph||"")}">`;
+  }
+  return `<div class="field ${f.full?"full":""}"><label for="${id}">${esc(f.l)}${f.req?" *":""}</label>${inp}${f.hint&&f.t!=="file"?`<div class="hint">${esc(f.hint)}</div>`:""}</div>`;
+}
+function openForm(store, obj){
+  const def = FORMS[store], isNew = !obj;
+  if(isNew){
+    obj = {id:uid()};
+    if(store==="remplacements"){ obj.taux=S.settings.tauxRetroDefaut; }
+    if(store==="depenses"){ obj.date=today(); obj.partPro=100; }
+    if(store==="remplacements"){ obj.declareUrssaf="Non"; }
+    if(store==="salaires"){ obj.periode=today().slice(0,7); obj.type=TYPES_SAL[0]; const last=live(S.salaires).sort((a,b)=>(b.periode||"").localeCompare(a.periode||""))[0]; if(last) obj.etablissement=last.etablissement; }
+  }
+  const m=$("#modal");
+  m.innerHTML = `<form class="sheet" id="theForm" novalidate>
+    <header><h2>${isNew?"Nouveau · ":""}${def.title}</h2><button type="button" class="btn ghost" data-close aria-label="Fermer">✕</button></header>
+    <div class="body"><div class="fgrid">${def.fields.map(f=>fieldHTML(f,obj[f.k])).join("")}</div>
+    ${store==="remplacements"?`<div class="calc" id="rempCalc" style="margin-top:12px"></div>`:""}
+    ${store==="depenses"?`<div class="calc" id="depCalc" style="margin-top:12px"></div>`:""}</div>
+    <footer>${!isNew?`<button type="button" class="btn danger" data-del>Supprimer</button>`:""}<span class="sp"></span>
+      <button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary">Enregistrer</button></footer></form>`;
+  m.classList.remove("hidden");
+  const form=$("#theForm");
+  let newFile=null;
+
+  if(store==="remplacements"){
+    let duManual = !!obj.montantDu && !(num(obj.honoraires)&&Math.abs(num(obj.honoraires)*num(obj.taux)/100-num(obj.montantDu))<0.01);
+    const upd=(src)=>{
+      const g=n=>form.elements[n];
+      if((src==="dateDebut"||src==="dateFin") && g("dateDebut").value && g("dateFin").value){ g("jours").value = daysBetween(g("dateDebut").value,g("dateFin").value); }
+      if(src==="montantDu") duManual = g("montantDu").value!=="";
+      if((src==="honoraires"||src==="taux") && !duManual && num(g("honoraires").value)) g("montantDu").value = String(r2(num(g("honoraires").value)*num(g("taux").value)/100)).replace(".",",");
+      if(src==="montantPercu" && num(g("montantPercu").value) && !g("datePaiement").value) g("datePaiement").value=today();
+      const c = rempCalc({montantDu:g("montantDu").value,montantPercu:g("montantPercu").value});
+      $("#rempCalc").innerHTML = `Statut : <b>${STATUT_LBL[c.statut][0]}</b>${c.reste?` · reste à encaisser <b class="num">${eur(c.reste)}</b>`:""}${num(g("jours").value)&&c.du?` · <span class="num">${eur(c.du/num(g("jours").value))}</span> / jour`:""}`;
+    };
+    form.addEventListener("input",e=>upd(e.target.name)); upd();
+  }
+  if(store==="salaires"){
+    const g=n=>form.elements[n];
+    form.addEventListener("input",e=>{ if(e.target.name==="netAvantImpot"||e.target.name==="impotPreleve"){ if(num(g("netAvantImpot").value)) g("netPaye").value=String(r2(num(g("netAvantImpot").value)-num(g("impotPreleve").value))).replace(".",","); } });
+  }
+  if(store==="depenses"){
+    const upd=()=>{ const g=n=>form.elements[n].value; $("#depCalc").innerHTML=`Montant déductible : <b class="num">${eur(depDeductible({montant:g("montant"),partPro:g("partPro")===""?100:g("partPro")}))}</b>${g("categorie")==="immo"?" · Un matériel de plus de 500 € HT s'amortit normalement sur plusieurs années (module immobilisations en V2).":""}`; };
+    form.addEventListener("input",upd); form.addEventListener("change",upd); upd();
+    const info=$("#fileInfo");
+    if(obj.fichierId) getOne("fichiers",obj.fichierId).then(f=>{ if(f&&!f.deleted) info.innerHTML=`Actuel : <a href="#" data-file="${obj.fichierId}">${esc(f.name)}</a> — choisir un fichier le remplace`; });
+    form.elements.justificatif.addEventListener("change",async e=>{
+      const file=e.target.files[0]; if(!file) return;
+      newFile = file.type.startsWith("image/") ? await compressImage(file) : file;
+      info.textContent = `${file.name} · ${(newFile.size/1024).toFixed(0)} Ko`;
+    });
+  }
+
+  const showErr = (msg, el)=>{
+    let box=form.querySelector(".formerr"); if(!box){ box=document.createElement("div"); box.className="formerr"; box.setAttribute("role","alert"); form.querySelector(".body").prepend(box); }
+    box.innerHTML=msg; (el||box).scrollIntoView({block:"center",behavior:"smooth"}); if(el) setTimeout(()=>el.focus({preventScroll:true}),300);
+  };
+  form.addEventListener("submit",async e=>{
+    e.preventDefault();
+    form.querySelectorAll(".field.invalid").forEach(x=>x.classList.remove("invalid"));
+    const manquants = def.fields.filter(f=>f.req && !String(form.elements[f.k].value).trim());
+    if(manquants.length){
+      manquants.forEach(f=>form.elements[f.k].closest(".field").classList.add("invalid"));
+      showErr(`Pour enregistrer, complétez : <b>${manquants.map(f=>esc(f.l)).join(", ")}</b>.${manquants.some(f=>f.t==="date"||f.t==="month")?"<br><span class='small'>Une date doit être entière (jour, mois et année).</span>":""}`, form.elements[manquants[0].k]);
+      return;
+    }
+    const btn=form.querySelector("button[type=submit]"); btn.disabled=true;
+    try{
+    const o = {...obj};
+    def.fields.forEach(f=>{ if(f.t==="file") return; const val=form.elements[f.k].value; o[f.k] = f.t==="dec" ? (val===""?"":num(val)) : val.trim(); });
+    if(store==="remplacements" && o.dateDebut && o.dateFin && o.dateFin<o.dateDebut){ form.elements.dateFin.closest(".field").classList.add("invalid"); showErr("La date de fin « Au » est avant la date de début « Du ».", form.elements.dateFin); btn.disabled=false; return; }
+    if(store==="depenses" && o.partPro==="") o.partPro=100;
+    if(newFile){
+      if(o.fichierId) await putOne("fichiers",{id:o.fichierId,deleted:true,updatedAt:Date.now()});
+      o.fichierId=uid(); await putOne("fichiers",{id:o.fichierId,name:newFile.name||"justificatif",type:newFile.type,blob:newFile,updatedAt:Date.now()});
+    }
+    await save(store,o); closeModal(); toast("Enregistré"); render();
+    }catch(err){
+      btn.disabled=false;
+      showErr(`L'enregistrement a échoué : ${esc(err&&err.message||err)}<br><span class="small">Si le fichier est ouvert dans un aperçu (application Claude, e-mail…), ouvrez-le directement dans Chrome.</span>`);
+    }
+  });
+  m.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeModal);
+  const del=m.querySelector("[data-del]");
+  if(del) del.onclick=async()=>{ if(!confirm("Supprimer cet élément ?")) return; await softDelete(store,obj); closeModal(); toast("Supprimé"); render(); };
+  setTimeout(()=>{ const first=form.querySelector("input:not([type=file]),select"); if(first && window.innerWidth>760 && !form.contains(document.activeElement)) first.focus(); },50);
+}
+function closeModal(){ const m=$("#modal"); m.classList.add("hidden"); m.innerHTML=""; }
+$("#modal").addEventListener("mousedown",e=>{ if(e.target.id==="modal") closeModal(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("#modal").classList.contains("hidden")) closeModal(); });
+
+async function compressImage(file){
+  try{
+    const bmp = await createImageBitmap(file);
+    const max=1600, sc=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*sc); c.height=Math.round(bmp.height*sc);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob = await new Promise(r=>c.toBlob(r,"image/jpeg",0.8));
+    if(!blob || blob.size>file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/,"")+".jpg", {type:"image/jpeg"});
+  }catch(_){ return file; }
+}
+async function openFile(id){
+  const f = await getOne("fichiers",id);
+  if(!f||!f.blob){ toast("Justificatif introuvable"); return; }
+  const url = URL.createObjectURL(f.blob);
+  const w = window.open(url,"_blank");
+  if(!w){ const a=document.createElement("a"); a.href=url; a.download=f.name; a.click(); }
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+/* ======================= Sauvegarde / import ======================= */
+const blobToDataURL = b => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(b); });
+async function dataURLToBlob(u){ return (await fetch(u)).blob(); }
+async function buildBackup(){
+  const fichiers=[];
+  for(const f of await getAll("fichiers")){
+    fichiers.push(f.blob? {id:f.id,name:f.name,type:f.type,updatedAt:f.updatedAt,data:await blobToDataURL(f.blob)} : {id:f.id,deleted:true,updatedAt:f.updatedAt});
+  }
+  const data = { app:"compta-medecin", version:APP_VERSION, exportedAt:new Date().toISOString(),
+    remplacements:await getAll("remplacements"), salaires:await getAll("salaires"), depenses:await getAll("depenses"),
+    settings:S.settings, fichiers };
+  const name = `compta-medecin-sauvegarde-${today()}.json`;
+  return new File([JSON.stringify(data)], name, {type:"application/json"});
+}
+async function markBackup(){ S.settings.lastBackup=Date.now(); await saveSettings(); }
+function download(file){ const url=URL.createObjectURL(file); const a=document.createElement("a"); a.href=url; a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000); }
+async function doBackup(){ const f=await buildBackup(); download(f); await markBackup(); toast("Sauvegarde téléchargée"); render(); }
+async function doShare(){
+  const f=await buildBackup();
+  try{ if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:"Sauvegarde Compta Médecin"}); await markBackup(); toast("Sauvegarde partagée"); render(); } else download(f); }
+  catch(e){ if(e.name!=="AbortError") toast("Partage impossible : "+e.message); }
+}
+async function doImport(file){
+  let data; try{ data=JSON.parse(await file.text()); }catch(_){ toast("Fichier illisible"); return; }
+  if(data.app!=="compta-medecin"){ toast("Ce fichier n'est pas une sauvegarde Compta Médecin"); return; }
+  let added=0, updated=0;
+  for(const s of ["remplacements","salaires","depenses"]){
+    for(const rec of data[s]||[]){
+      const cur = await getOne(s,rec.id);
+      if(!cur){ await putOne(s,rec); if(!rec.deleted) added++; }
+      else if((rec.updatedAt||0) > (cur.updatedAt||0)){ await putOne(s,rec); updated++; }
+    }
+  }
+  for(const f of data.fichiers||[]){
+    const cur = await getOne("fichiers",f.id);
+    if(cur && (cur.updatedAt||0) >= (f.updatedAt||0)) continue;
+    await putOne("fichiers", f.deleted? {id:f.id,deleted:true,updatedAt:f.updatedAt} : {id:f.id,name:f.name,type:f.type,updatedAt:f.updatedAt,blob:await dataURLToBlob(f.data)});
+  }
+  if(data.settings && (data.settings.updatedAt||0) > (S.settings.updatedAt||0)){ const lb=S.settings.lastBackup; S.settings={...DEFAULT_SETTINGS,...data.settings,lastBackup:lb}; await putOne("meta",S.settings); }
+  await loadAll(); render();
+  toast(`Import terminé : ${added} ajout(s), ${updated} mise(s) à jour`);
+}
+$("#importFile").addEventListener("change",e=>{ const f=e.target.files[0]; if(f) doImport(f); e.target.value=""; });
+
+/* ======================= Exports CSV ======================= */
+function csv(rows){
+  const cell = v => { if(typeof v==="number") return String(v).replace(".",","); const s=String(v??""); return /[;"\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s; };
+  return "﻿"+rows.map(r=>r.map(cell).join(";")).join("\r\n");
+}
+function exportCSV(kind){
+  const y=periodLabel().replace(/\s+/g,"-").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); let rows, name;
+  if(kind==="journal"){
+    name=`livre-journal-recettes-${y}.csv`;
+    rows=[["Date d'encaissement","Origine","Client / médecin","Mode de paiement","Montant (€)"]];
+    live(S.remplacements).filter(r=>inP(r.datePaiement)&&num(r.montantPercu)).sort((a,b)=>a.datePaiement.localeCompare(b.datePaiement))
+      .forEach(r=>rows.push([fdate(r.datePaiement),`Rétrocession remplacement ${fdate(r.dateDebut)} au ${fdate(r.dateFin)}`,r.medecin,r.modePaiement||"",r2(num(r.montantPercu))]));
+  } else if(kind==="remplacements"){
+    name=`remplacements-${y}.csv`;
+    rows=[["Début","Fin","Médecin remplacé","Lieu","Jours","Honoraires (€)","Taux (%)","Rétrocession due (€)","Perçu (€)","Encaissé le","Mode","Statut","Cotisations URSSAF (€)","Déclaré URSSAF","Notes"]];
+    live(S.remplacements).filter(r=>inP(r.dateDebut)||inP(r.datePaiement)||inP(r.dateFin)).sort((a,b)=>(a.dateDebut||"").localeCompare(b.dateDebut||""))
+      .forEach(r=>{const c=rempCalc(r); rows.push([fdate(r.dateDebut),fdate(r.dateFin),r.medecin,r.lieu||"",num(r.jours),num(r.honoraires),num(r.taux),c.du,c.percu,r.datePaiement?fdate(r.datePaiement):"",r.modePaiement||"",STATUT_LBL[c.statut][0],num(r.cotisReelles),r.declareUrssaf||"Non",r.notes||""]);});
+  } else if(kind==="depenses"){
+    name=`depenses-${y}.csv`;
+    rows=[["Date","Libellé","Catégorie","Montant TTC (€)","Part pro (%)","Déductible (€)","Mode","Justificatif","Notes"]];
+    live(S.depenses).filter(d=>inP(d.date)).sort((a,b)=>a.date.localeCompare(b.date))
+      .forEach(d=>rows.push([fdate(d.date),d.libelle,CAT[d.categorie]||d.categorie,num(d.montant),num(d.partPro??100),depDeductible(d),d.modePaiement||"",d.fichierId?"oui":"non",d.notes||""]));
+  } else {
+    name=`salaires-hospitaliers-${y}.csv`;
+    rows=[["Mois","Établissement","Type","Avant impôt (€)","Impôt prélevé (€)","Net versé (€)","Net imposable (€)","Versé le","Notes"]];
+    live(S.salaires).filter(s=>inP(s.periode)).sort((a,b)=>a.periode.localeCompare(b.periode))
+      .forEach(s=>rows.push([fmonth(s.periode),s.etablissement,s.type||"",salRevenu(s),num(s.impotPreleve),num(s.netPaye),num(s.netImposable),s.dateVersement?fdate(s.dateVersement):"",s.notes||""]));
+  }
+  download(new File([csv(rows)],name,{type:"text/csv;charset=utf-8"}));
+  toast(`${rows.length-1} ligne(s) exportée(s)`);
+}
+
+/* ======================= Délégation des clics ======================= */
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-new],[data-edit],[data-go],[data-act],[data-csv],[data-file],[data-per],[data-decl],[data-urs]");
+  if(!t) return;
+  if(t.dataset.per){ S.settings.urssafPeriodicite=t.dataset.per; S.filters.ursOpen=null; await saveSettings(); render(); return; }
+  if(t.dataset.decl){ const k=t.dataset.decl, d={...(S.settings.declarations||{})};
+    if(d[k]){ delete d[k]; } else { const v=prompt("Date de la déclaration (JJ/MM/AAAA)", new Date().toLocaleDateString("fr-FR")); if(v===null) return;
+      const m=v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); d[k]= m? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : today(); }
+    S.settings.declarations=d; await saveSettings(); render(); return; }
+  if(t.dataset.urs){ S.filters.ursOpen = S.filters.ursOpen===t.dataset.urs? null : t.dataset.urs; render(); return; }
+  if(t.dataset.file){ e.preventDefault(); e.stopPropagation(); openFile(t.dataset.file); return; }
+  if(t.dataset.new) return openForm(t.dataset.new);
+  if(t.dataset.edit){ const [s,id]=t.dataset.edit.split(":"); return openForm(s, S[s].find(x=>x.id===id)); }
+  if(t.dataset.go){ S.view=t.dataset.go; render(); window.scrollTo(0,0); return; }
+  if(t.dataset.csv) return exportCSV(t.dataset.csv);
+  const a=t.dataset.act;
+  if(a==="backup") return doBackup();
+  if(a==="share") return doShare();
+  if(a==="import") return $("#importFile").click();
+  if(a==="print") return window.print();
+  if(a==="wipe"){
+    if(prompt('Pour tout effacer sur cet appareil, tapez EFFACER')!=="EFFACER") return;
+    for(const s of STORES) await clearStore(s);
+    await loadAll(); render(); toast("Données effacées");
+  }
+});
+document.addEventListener("change",e=>{ const f=e.target.dataset&&e.target.dataset.filter; if(f){ F[f]=e.target.value; render(); } });
+
+/* ======================= Démarrage ======================= */
+window.addEventListener("unhandledrejection",e=>toast("Erreur : "+(e.reason&&e.reason.message||e.reason)));
+/* ---- Version installable (téléphone) : uniquement quand l'app est servie depuis un site web ---- */
+if(/^https?:$/.test(location.protocol)){
+  const l=document.createElement("link"); l.rel="manifest"; l.href="manifest.webmanifest"; document.head.appendChild(l);
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").then(reg=>{
+      reg.addEventListener("updatefound",()=>{ const w=reg.installing; w&&w.addEventListener("statechange",()=>{ if(w.state==="installed"&&navigator.serviceWorker.controller) toast("Nouvelle version téléchargée : elle sera active à la prochaine ouverture."); }); });
+    }).catch(()=>{});
+  }
+}
+(async function init(){
+  try{
+    db = await openDB();
+    await putOne("meta",{id:"_probe",t:Date.now()});
+    await loadAll();
+    if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+    render();
+  }catch(err){
+    $("#view").innerHTML = `<div class="card"><h2>Impossible d'ouvrir la base de données</h2><p>${esc(err&&err.message||err)}</p><p class="small muted">L'application doit être ouverte directement dans Chrome (pas dans un aperçu de fichier ni en navigation privée) pour pouvoir enregistrer les données.</p></div>`;
+  }
+})();
+</script>
+</body>
+</html>
